@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getCompanyCandidates } from '@/mastra/tools/getCompanyCandidates';
-import { RuntimeContext } from '@mastra/core/runtime-context';
+const MASTRA_URL = process.env.MASTRA_API_URL ?? "http://localhost:4111";
 
 // 入力バリデーション用スキーマ
 const CompanySearchSchema = z.object({
@@ -14,9 +13,28 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parsed = CompanySearchSchema.parse(body);
-    // Agentに処理を委譲
-    const candidates = await getCompanyCandidates.execute({ context: { query: parsed.query }, runtimeContext: new RuntimeContext() });
-    return NextResponse.json(candidates);
+    const mastraRes = await fetch(`${MASTRA_URL}/api/agents/companyIdentifier/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: parsed.query }]
+      }),
+    });
+
+    if (!mastraRes.ok) {
+      return NextResponse.json({ error: "Mastra APIエラー" }, { status: mastraRes.status });
+    }
+    const data = await mastraRes.json();
+    if (typeof data.text === "string") {
+      try {
+        const parsed = JSON.parse(data.text);
+        return NextResponse.json(parsed);
+      } catch {
+        // パースできなければそのまま返す
+        return NextResponse.json(data);
+      }
+    }
+    return NextResponse.json(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });

@@ -17,25 +17,19 @@ export const companyIdentifierAgent = new Agent({
 
   /** システムプロンプト */
   instructions: `
-  あなたは企業検索エージェントです。
+  あなたは企業情報検索エージェントです。
 
   (1) 入力で受け取った企業名を調べる時は
-      Playwright MCP サーバーのブラウザ操作ツール群
-      （browser_navigate, browser_snapshot, browser_type, browser_click など）
+      Perplexity MCP サーバーのperplexity_askツール
       を必ず使ってください。
 
   (2) 具体的な手順は以下の通りです。
-      ① browser_navigate で アラームボックス企業情報サイト にアクセス
-      ② browser_snapshot でページ構造を取得
-      ③ 企業名入力欄を特定し、browser_type で <企業名> を入力
-      ④ 検索ボタンを browser_click で押下
-      ⑤ 結果ページが表示されたら browser_snapshot で取得し、法人番号・企業名・所在地を抽出
+      ① perplexity_ask で <企業名> の法人番号・企業名・所在地を教えてください を検索
+      ② 検索結果から法人番号・企業名・所在地を抽出
 
-  (3) 各ツール呼び出しは **ツールが要求する引数オブジェクトのみ** を JSON で出力してください。
-      例: play*wright*_*browser_navigate* を呼ぶ場合は次のように出力します。
-      {
-        "url": "https://alarmbox.jp/companyinfo/"
-      }
+  (3) ツール呼び出しは内部処理としてのみ使い、
+      ユーザーへの最終出力は必ず下記TypeScript型の配列のみとしてください。
+      ツール呼び出し用JSONや中間出力は絶対に返さないこと。
 
   (4) 最終的に取得した情報を
       ↓ の TypeScript 型そのままの JSON 配列で応答してください。
@@ -46,8 +40,11 @@ export const companyIdentifierAgent = new Agent({
   }
   余分な文章は一切付けないこと。`,
 
-
-  tools: async () => ({
-    ...(await mcp.getTools()),            // 例: playwright_browser_navigate
-  }),
+  tools: async () => {
+    const tools = await mcp.getTools();
+    console.log(process.env.HOGE)
+    return {
+      "perplexity-ask_perplexity_ask": tools["perplexity-ask_perplexity_ask"],
+    };
+  },
 });

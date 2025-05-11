@@ -42,12 +42,14 @@ export const companyDataAgent = new Agent({
   あなたは企業情報収集エージェントです。
   WEBサイトで次の情報を検索してください。
   - 代表者名
-  - コーポレートURL または LPのURL
-  - 電話番号 または 従業員数
+  - コーポレートURL
+  - 提供サービス/商品のLPのURL
+  - 電話番号
+  - 従業員数
   - 設立年月日
   - 企業概要
 
-  それぞれの検索結果から該当情報を抽出し、TypeScript型 CompanyData のJSONとして、余分な文章なしで返してください。
+  検索結果から該当情報を抽出し、TypeScript型 CompanyData のJSONとして、余分な文章なしで返してください。
   `,
   evals: {
     summarization: new SummarizationMetric(model),
