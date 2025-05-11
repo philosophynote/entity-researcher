@@ -29,6 +29,18 @@
 #### 2.2.2 企業情報収集
 
 - PerplexityのMCPサーバーを利用し、以下の情報を取得
+  - **企業基本情報の出力型（TypeScript定義）**
+    ```ts
+    export type CompanyData = {
+      corporateUrl: string;      // コーポレートサイトURL
+      landingPages: string[];    // サービス/商品LPのURLリスト
+      industry: string;          // 業種（jis_industry_classification.yamlのsubcategoriesから選択）
+      phone: string;             // 電話番号
+      employees: number;         // 従業員数
+      founded: string;           // 設立年月日 (YYYY-MM-DD)
+      overview: string;          // 企業概要（100文字程度）
+    }
+    ```
   - コーポレートURL
   - 商品/サービスのLP（Landing Page）URL
   - 業種（`src/mastra/jis_industry_classification.yaml`の`subcategories`から選択）

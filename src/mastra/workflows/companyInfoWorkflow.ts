@@ -1,38 +1,8 @@
 import { Workflow, Step } from '@mastra/core/workflows';
 import { z } from 'zod';
-import { Agent } from '@mastra/core/agent';
-import { openai } from '@ai-sdk/openai';
-import { mcp } from '../mcp';
+import { companyDataAgent } from '../agents/companyDataAgent';
 import { browserAutomationAgent } from '../agents/browserAutomationAgent';
 import { CompanyCandidate } from '../agents/companyIdentifierAgent';
-
-/** Perplexityを利用して企業基本情報を収集 */
-const companyDataAgent = new Agent({
-  name: 'CompanyDataAgent',
-  model: openai('gpt-4o-mini'),
-  tools: async () => ({ ...(await mcp.getTools()) }),
-  instructions: `
-  あなたは企業情報収集エージェントです。
-  以下の企業情報をもとに、次の情報を取得してください。
-  - コーポレートURL
-  - サービス/商品LP URL リスト
-  - 業種 (jis_industry_classification.yaml の subcategories から選択)
-  - 電話番号
-  - 従業員数
-  - 設立年月日 (YYYY-MM-DD)
-  - 企業概要 (100文字程度)
-  出力は余分な文章なしで、次の型のJSONとして返してください:
-  {
-    corporateUrl: string;
-    landingPages: string[];
-    industry: string;
-    phone: string;
-    employees: number;
-    founded: string;
-    overview: string;
-  }
-  `,
-});
 
 const gatherBasicInfo = new Step({
   id: 'gatherBasicInfo',
