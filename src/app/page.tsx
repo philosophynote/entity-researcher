@@ -1,103 +1,277 @@
-import Image from "next/image";
+'use client';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+
+/**
+ * 企業候補型
+ */
+type CompanyCandidate = {
+  corporateNumber: string;
+  name: string;
+  address: string;
+};
+
+/**
+ * 企業情報型（APIスキーマと合わせる）
+ */
+type CompanyInfo = {
+  corporateNumber: string;
+  name: string;
+  address: string;
+  corporateUrl: string;
+  lpUrl: string;
+  industry: string;
+  phone: string;
+  employees: string;
+  established: string;
+  summary: string;
+  socialInsurance: {
+    joined: boolean;
+    insuredCount: number;
+    sourceUrl: string;
+  };
+  pressReleases: Array<{
+    title: string;
+    url: string;
+    date: string;
+    sourceUrl: string;
+  }>;
+  news: Array<{
+    title: string;
+    url: string;
+    date: string;
+    sourceUrl: string;
+  }>;
+  reviews: Array<{
+    site: string;
+    title: string;
+    url: string;
+    summary: string;
+    sourceUrl: string;
+  }>;
+  anonymousBoard: Array<{
+    title: string;
+    url: string;
+    summary: string;
+    sourceUrl: string;
+  }>;
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [query, setQuery] = useState("");
+  const [candidates, setCandidates] = useState<CompanyCandidate[]>([]);
+  const [selected, setSelected] = useState<CompanyCandidate | null>(null);
+  const [info, setInfo] = useState<CompanyInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // 企業候補検索
+  const searchCandidates = async () => {
+    setError("");
+    setCandidates([]);
+    setSelected(null);
+    setInfo(null);
+    if (!query) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/company-candidates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) throw new Error("検索に失敗しました");
+      const data = await res.json();
+      setCandidates(data);
+    } catch (e) {
+      setError("企業候補の取得に失敗しました");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 企業情報取得
+  const fetchInfo = async (candidate: CompanyCandidate) => {
+    setError("");
+    setInfo(null);
+    setSelected(candidate);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/company-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ corporateNumber: candidate.corporateNumber }),
+      });
+      if (!res.ok) throw new Error("情報取得に失敗しました");
+      const data = await res.json();
+      setInfo(data);
+    } catch (e) {
+      setError("企業情報の取得に失敗しました");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto py-12 px-4">
+      <h1 className="text-2xl font-bold mb-6">企業情報リサーチャー</h1>
+      <div className="flex gap-2 mb-4">
+        <input
+          className="border rounded px-3 py-2 flex-1"
+          type="text"
+          placeholder="企業名を入力"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && searchCandidates()}
+        />
+        <Button onClick={searchCandidates} disabled={loading || !query}>
+          検索
+        </Button>
+      </div>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {/* 候補表示 */}
+      {candidates.length > 0 && (
+        <div className="mb-6">
+          <div className="mb-2 text-sm">候補から選択してください：</div>
+          <ul className="space-y-2">
+            {candidates.map(c => (
+              <li key={c.corporateNumber}>
+                <Button
+                  variant={selected?.corporateNumber === c.corporateNumber ? "default" : "outline"}
+                  onClick={() => fetchInfo(c)}
+                  disabled={loading}
+                >
+                  {c.name}（{c.address}）
+                </Button>
+              </li>
+            ))}
+          </ul>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+      {/* 企業情報テーブル */}
+      {info && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full border text-sm">
+            <thead>
+              <tr>
+                <th className="border px-2 py-1">項目名</th>
+                <th className="border px-2 py-1">内容</th>
+                <th className="border px-2 py-1">情報源URL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border px-2 py-1">法人番号</td>
+                <td className="border px-2 py-1">{info.corporateNumber}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">企業名</td>
+                <td className="border px-2 py-1">{info.name}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">所在地</td>
+                <td className="border px-2 py-1">{info.address}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">コーポレートURL</td>
+                <td className="border px-2 py-1">
+                  <a href={info.corporateUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.corporateUrl}</a>
+                </td>
+                <td className="border px-2 py-1">{info.corporateUrl}</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">LP URL</td>
+                <td className="border px-2 py-1">
+                  <a href={info.lpUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.lpUrl}</a>
+                </td>
+                <td className="border px-2 py-1">{info.lpUrl}</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">業種</td>
+                <td className="border px-2 py-1">{info.industry}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">電話番号</td>
+                <td className="border px-2 py-1">{info.phone}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">従業員数</td>
+                <td className="border px-2 py-1">{info.employees}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">設立年月日</td>
+                <td className="border px-2 py-1">{info.established}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">企業概要</td>
+                <td className="border px-2 py-1">{info.summary}</td>
+                <td className="border px-2 py-1">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">社会保険加入状況</td>
+                <td className="border px-2 py-1">{info.socialInsurance.joined ? '加入' : '未加入'}（被保険者数: {info.socialInsurance.insuredCount}人）</td>
+                <td className="border px-2 py-1">
+                  <a href={info.socialInsurance.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.socialInsurance.sourceUrl}</a>
+                </td>
+              </tr>
+              {/* プレスリリース */}
+              {info.pressReleases.map((pr, i) => (
+                <tr key={"pr-"+i}>
+                  <td className="border px-2 py-1">プレスリリース</td>
+                  <td className="border px-2 py-1">
+                    <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.title}（{pr.date}）</a>
+                  </td>
+                  <td className="border px-2 py-1">
+                    <a href={pr.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.sourceUrl}</a>
+                  </td>
+                </tr>
+              ))}
+              {/* ニュース */}
+              {info.news.map((n, i) => (
+                <tr key={"news-"+i}>
+                  <td className="border px-2 py-1">ニュース</td>
+                  <td className="border px-2 py-1">
+                    <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.title}（{n.date}）</a>
+                  </td>
+                  <td className="border px-2 py-1">
+                    <a href={n.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.sourceUrl}</a>
+                  </td>
+                </tr>
+              ))}
+              {/* 口コミ */}
+              {info.reviews.map((r, i) => (
+                <tr key={"review-"+i}>
+                  <td className="border px-2 py-1">口コミ（{r.site}）</td>
+                  <td className="border px-2 py-1">
+                    <a href={r.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.title}</a><br />{r.summary}
+                  </td>
+                  <td className="border px-2 py-1">
+                    <a href={r.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.sourceUrl}</a>
+                  </td>
+                </tr>
+              ))}
+              {/* 匿名掲示板 */}
+              {info.anonymousBoard.map((a, i) => (
+                <tr key={"anon-"+i}>
+                  <td className="border px-2 py-1">匿名掲示板</td>
+                  <td className="border px-2 py-1">
+                    <a href={a.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{a.title}</a><br />{a.summary}
+                  </td>
+                  <td className="border px-2 py-1">
+                    <a href={a.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{a.sourceUrl}</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

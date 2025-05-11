@@ -30,10 +30,17 @@ export type CompanyCandidate = {
 
 // @ts-ignore 型定義が追いついていない場合の一時対応
 const companyIdentifierAgent = new Agent({
-  name: "company-identifier",
-  instructions: "あなたは企業名から法人番号・企業名・所在地を検索するエージェントです。getCompanyCandidatesツールを使って企業候補を取得してください。",
+  name: "companyIdentifierAgent",
+  instructions: 
+  `
+  あなたは企業名から法人番号・企業名・所在地を検索するエージェントです。
+  WEB検索を行って企業候補を取得してください。
+  回答は必ず日本語で行ってください。
+  `,
   model: openai("gpt-4o-mini"),
-  tools: { getCompanyCandidates },
+  tools: {
+    getCompanyCandidates
+  },
 });
 
 export default companyIdentifierAgent; 

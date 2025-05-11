@@ -1,0 +1,1 @@
+export { getCompanyCandidates } from "./getCompanyCandidates";
