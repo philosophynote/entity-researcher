@@ -19,9 +19,9 @@ export const getCompanyCandidates = createTool({
     `,
 
   /* 入力スキーマ ---------------------------------------------------- */
-  inputSchema: z.object({
-    query: z.string(),
-  }),
+  // inputSchema: z.object({
+  //   query: z.string(),
+  // }),
 
   /* 出力スキーマ ---------------------------------------------------- */
   outputSchema: z.array(
@@ -34,17 +34,21 @@ export const getCompanyCandidates = createTool({
 
   /* 実装 ------------------------------------------------------------ */
   async execute({ context }) {
-    console.log("context")
-    console.log(context)
-    const { query } = context;        // ← ★ ここ
+    const { query } = context as { query: string };        // ← ★ ここ
     if (!query) return []
     // Brave Search MCP ツールを取得
+    console.log("mcp.getTools()")
+    console.log(await mcp.getTools())
     const braveSearch =
       (await mcp.getTools())["brave-search_brave_web_search"];
+    console.log("braveSearch")
+    console.log(braveSearch)
     if (!braveSearch) throw new Error("Brave Search tool not found");
 
     // 必須キーは query だけ
     const res = await braveSearch({ query });   // ← 推奨書式
+    console.log("res")
+    console.log(res)
     console.log("[getCompanyCandidates] raw res =", JSON.stringify(res, null, 2));
 
     // Brave Search の実装によっては results か content に返る
