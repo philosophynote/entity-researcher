@@ -42,7 +42,6 @@ export const companyIdentifierAgent = new Agent({
 
   tools: async () => {
     const tools = await mcp.getTools();
-    console.log(process.env.HOGE)
     return {
       "perplexity-ask_perplexity_ask": tools["perplexity-ask_perplexity_ask"],
     };

@@ -2,10 +2,6 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { mcp } from '../mcp';
 
-/**
- * PR TIMES から企業のプレスリリース情報を取得するツール
- * 2025-05-11 を基準に直近 6 か月（2024-11-11〜2025-05-11）のニュースだけを返却します
- */
 export const prTimesSearch = createTool({
   id: 'prTimesSearch',
   description: 'PR TIMES から企業のプレスリリース情報を取得します',
@@ -22,9 +18,6 @@ export const prTimesSearch = createTool({
     )
     .describe('プレスリリース情報の配列'),
   execute: async ({ context: { companyName } }) => {
-    console.log("prTimesSearch")
-    console.log(await mcp.getTools())
-    console.log(companyName)
     /* ==== Playwright MCP ツールハンドル取得 ==== */
     const tools = await mcp.getTools();
     const navigate = tools["playwright_browser_navigate"];
@@ -32,18 +25,19 @@ export const prTimesSearch = createTool({
     const fill = tools["playwright_page_fill"];
     const press = tools["playwright_keyboard_press"];
     const evaluate = tools["playwright_page_evaluate"];
-
+    console.log("prTimesSearch")
     /* ==== 1. TOP へアクセス ==== */
     await navigate({ url: 'https://prtimes.jp/' });
     await waitFor({ selector: 'input[name="search_word"]' });
-
+    console.log("prTimesSearch 1")
     /* ==== 2. キーワード検索 ==== */
     await fill({ selector: 'input[name="search_word"]', text: companyName });
     await press({ key: 'Enter' });
+    console.log("prTimesSearch 2")
 
     /* 検索結果ページのロード待ち */
     await waitFor({ selector: 'time.date' }); // 各カードの日付要素
-
+    console.log("prTimesSearch 3")
     /* ==== 3. 直近 6 か月分を抽出 ==== */
     const todayISO = '2025-05-11';
     const news = await evaluate({

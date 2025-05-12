@@ -26,6 +26,7 @@ export const mcp =
           "-y",
           "@playwright/mcp@latest",
           "--headless",
+          "--browser", "chromium",
         ],
       },
 
