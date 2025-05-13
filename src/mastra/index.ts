@@ -8,6 +8,7 @@ import { prtimesAgent } from './agents/prtimesAgent';
 import { nikkeiAgent } from './agents/nikkeiAgent';
 import { threadAgent } from './agents/threadAgent';
 import { socialInsuranceAgent } from './agents/socialInsuranceAgent';
+import { fetchNewsAgent } from './agents/fetchNewsAgent';
 
 export const mastra = new Mastra({
   agents: {
@@ -18,6 +19,7 @@ export const mastra = new Mastra({
     nikkeiAgent: nikkeiAgent,
     threadAgent: threadAgent,
     socialInsuranceAgent: socialInsuranceAgent,
+    fetchNewsAgent: fetchNewsAgent,
   },
   workflows: {
     companyInfoWorkflow,

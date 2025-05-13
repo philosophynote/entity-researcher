@@ -1,6 +1,5 @@
 import { Agent } from '@mastra/core/agent';
 import { openai } from '@ai-sdk/openai';
-import { prTimesSearch } from '../tools/prTimesTool';
 import { nikkeiSearch } from '../tools/nikkeiTool';
 import { reviewSearch } from '../tools/reviewTool';
 import { bulletinSearch } from '../tools/bulletinTool';
@@ -12,7 +11,6 @@ export const browserAutomationAgent = new Agent({
   name: 'BrowserAutomationAgent',
   model: openai('gpt-4.1-mini'),
   tools: {
-    prTimesSearch,
     nikkeiSearch,
     reviewSearch,
     bulletinSearch,

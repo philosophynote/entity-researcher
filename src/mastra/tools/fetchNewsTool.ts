@@ -13,11 +13,6 @@ type Article = {
   source: { name: string };
 };
 
-/** 文字列が日本語を含むか判定 */
-function containsJapanese(text: string): boolean {
-  return /[一-龯ぁ-んァ-ン]/.test(text);
-}
-
 /**
  * 企業名からNEWS APIで日本のビジネスニュース（タイトル・日付・URL）を取得するツール
  */
@@ -38,21 +33,22 @@ export const fetchNewsByCompany = createTool({
 
     // NEWS APIで日本のビジネスニュースを取得
     const params = new URLSearchParams({
-      country: 'jp',
-      category: 'business',
+      q: companyName,
+      sortBy: 'publishedAt',
       pageSize: '50',
       apiKey,
-      q: companyName,
     });
-    const res = await fetch(`https://newsapi.org/v2/top-headlines?${params.toString()}`);
+    console.log(`https://newsapi.org/v2/everything?${params.toString()}`);
+    const res = await fetch(`https://newsapi.org/v2/everything?${params.toString()}`);
+    console.log(res);
     if (!res.ok) throw new Error(`NewsAPI request failed: ${res.status} ${res.statusText}`);
 
     const data = await res.json() as { status: string; articles: Article[] };
+    console.log(data);
     if (data.status !== 'ok') throw new Error('NewsAPI returned non-ok status');
 
     // 企業名を含み、日本語タイトルの記事のみ返す
     return data.articles
-      .filter(a => a.title.includes(companyName) && containsJapanese(a.title))
       .map(a => ({
         title: a.title,
         date: a.publishedAt,
