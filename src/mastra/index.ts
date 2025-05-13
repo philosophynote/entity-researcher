@@ -9,17 +9,21 @@ import { nikkeiAgent } from './agents/nikkeiAgent';
 import { threadAgent } from './agents/threadAgent';
 import { socialInsuranceAgent } from './agents/socialInsuranceAgent';
 import { fetchNewsAgent } from './agents/fetchNewsAgent';
+import { classifyRiskAgent } from './agents/classifyRiskAgent';
+import { bulletinAgent } from './agents/bulletinAgent';
 
 export const mastra = new Mastra({
   agents: {
     companyIdentifier: companyIdentifierAgent,
-    browserAutomation: browserAutomationAgent,
+    // browserAutomation: browserAutomationAgent,
     companyData: companyDataAgent,
     prtimesAgent: prtimesAgent,
     nikkeiAgent: nikkeiAgent,
-    threadAgent: threadAgent,
+    // threadAgent: threadAgent,
     socialInsuranceAgent: socialInsuranceAgent,
     fetchNewsAgent: fetchNewsAgent,
+    classifyRiskAgent: classifyRiskAgent,
+    bulletinAgent: bulletinAgent,
   },
   workflows: {
     companyInfoWorkflow,

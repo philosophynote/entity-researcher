@@ -2,7 +2,6 @@ import { Agent } from '@mastra/core/agent';
 import { openai } from '@ai-sdk/openai';
 import { nikkeiSearch } from '../tools/nikkeiTool';
 import { reviewSearch } from '../tools/reviewTool';
-import { bulletinSearch } from '../tools/bulletinTool';
 
 /**
  * Playwright MCP ツールとカスタムツールを組み合わせたブラウザ自動操作エージェント
@@ -13,7 +12,6 @@ export const browserAutomationAgent = new Agent({
   tools: {
     nikkeiSearch,
     reviewSearch,
-    bulletinSearch,
   },
   instructions: `
   あなたはブラウザ操作エージェントです。

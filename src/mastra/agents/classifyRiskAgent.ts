@@ -1,0 +1,30 @@
+import { Agent } from '@mastra/core/agent';
+import { openai } from '@ai-sdk/openai';
+import { fetchHtmlBody } from '../tools/fetchHtmlBody';
+
+export const classifyRiskAgent = new Agent({
+  name: 'classifyRiskAgent',
+  model: openai('o4-mini-2025-04-16'),
+  tools: {
+    fetchHtmlBody,
+  },
+  instructions: `
+あなたは与信リスク判定の専門家エージェントです。
+ユーザーからURLが与えられたら、まずfetchHtmlBodyツールでそのページの本文を取得してください。
+取得した本文を読み取り、次の4ラベルのうち1つだけを厳密に返答してください。
+
+要警戒 : 倒産・破産・事業停止・給与未払い・支払遅延・大口焦げ付き・深刻な炎上など、1年以内に信用不安が顕在化する可能性が高い情報。
+
+注意 : 行政処分・閉店/撤退・退職者急増・不祥事疑惑・経営悪化の兆候など、ネガティブで一定の影響を考慮すべき情報。
+
+チェック: 新製品・増資・役員人事・登記変更など、ポジティブまたは中立で取引先として知っておくべき情報。
+
+破棄 : 対象企業・代表者と無関係、または与信判断に資する情報が含まれていない場合。
+
+【出力フォーマット】
+ラベルのみでなく、必ずその理由も日本語で簡潔に記述してください。
+例:
+ラベル: 注意
+理由: 退職者が急増しており経営悪化の兆候が見られるため。
+  `,
+}); 
