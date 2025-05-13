@@ -1,173 +1,111 @@
-import { Workflow, Step } from '@mastra/core/workflows';
-import { z } from 'zod';
+import { createWorkflow, createStep } from "@mastra/core/workflows/vNext";
+import { z } from "zod";
 import { companyDataAgent } from '../agents/companyDataAgent';
-import { browserAutomationAgent } from '../agents/browserAutomationAgent';
-import { CompanyCandidate } from '../agents/companyIdentifierAgent';
+import { socialInsuranceAgent } from '../agents/socialInsuranceAgent';
+import { prtimesAgent } from '../agents/prtimesAgent';
+import { nikkeiAgent } from '../agents/nikkeiAgent';
+import { fetchNewsAgent } from '../agents/fetchNewsAgent';
+import { openworkAgent } from '../agents/openworkAgent';
+import { bulletinAgent } from '../agents/bulletinAgent';
 
-const gatherBasicInfo = new Step({
-  id: 'gatherBasicInfo',
-  outputSchema: z.object({
-    corporateUrl: z.string(),
-    landingPages: z.array(z.string()),
-    industry: z.string(),
-    phone: z.string(),
-    employees: z.number(),
-    founded: z.string(),
-    overview: z.string(),
-  }),
-  execute: async ({ context }) => {
-    const { corporateNumber, name, address } = context.triggerData as CompanyCandidate;
-    const prompt = `法人番号: ${corporateNumber}\n企業名: ${name}\n所在地: ${address}`;
-    const res = await companyDataAgent.generate(prompt, {
-      output: z.object({
-        corporateUrl: z.string(),
-        landingPages: z.array(z.string()),
-        industry: z.string(),
-        phone: z.string(),
-        employees: z.number(),
-        founded: z.string(),
-        overview: z.string(),
-      }),
-    });
-    return res.object;
-  },
-});
-
-const gatherInsurance = new Step({
-  id: 'gatherInsurance',
-  outputSchema: z.object({
-    insuredStatus: z.string(),
-    insuredCount: z.number(),
-  }),
-  execute: async ({ context }) => {
-    const { corporateNumber } = context.triggerData as CompanyCandidate;
-    const prompt = `以下の手順で社会保険加入状況および被保険者人数を取得してください:\n1. browser_navigate https://www2.nenkin.go.jp/do/search_section/\n2. browser_snapshot\n3. 検索フォームに法人番号 ${corporateNumber} を入力し、browser_click\n4. 結果ページで browser_snapshot を実行`;
-    const res = await browserAutomationAgent.generate(prompt, {
-      output: z.object({
-        insuredStatus: z.string(),
-        insuredCount: z.number(),
-      }),
-    });
-    return res.object;
-  },
-});
-
-const gatherPressReleases = new Step({
-  id: 'gatherPressReleases',
-  outputSchema: z.object({
-    pressReleases: z.array(z.object({
-      title: z.string(),
-      date: z.string(),
-      url: z.string(),
-    })),
-  }),
-  execute: async ({ context }) => {
-    const { name } = context.triggerData as CompanyCandidate;
-    const prompt = `以下のサイトから過去6ヶ月間のプレスリリース情報を取得してください:\n1. browser_navigate https://prtimes.jp/\n2. browser_snapshot\n3. 検索窓に企業名 ${name} を入力し、browser_click\n4. 結果リストに対して browser_snapshot を実行`;
-    const res = await browserAutomationAgent.generate(prompt, {
-      output: z.object({
-        pressReleases: z.array(z.object({ title: z.string(), date: z.string(), url: z.string() })),
-      }),
-    });
-    return res.object;
-  },
-});
-
-const gatherNews = new Step({
-  id: 'gatherNews',
-  outputSchema: z.object({
-    news: z.array(z.object({
-      title: z.string(),
-      date: z.string(),
-      url: z.string(),
-    })),
-  }),
-  execute: async ({ context }) => {
-    const { name } = context.triggerData as CompanyCandidate;
-    const prompt = `以下のサイトから最新のニュースを取得してください:\n1. browser_navigate https://www.nikkei.com/\n2. browser_snapshot\n3. 検索窓に企業名 ${name} を入力し、browser_click\n4. 結果リストに対して browser_snapshot を実行`;
-    const res = await browserAutomationAgent.generate(prompt, {
-      output: z.object({
-        news: z.array(z.object({ title: z.string(), date: z.string(), url: z.string() })),
-      }),
-    });
-    return res.object;
-  },
-});
-
-const gatherReviews = new Step({
-  id: 'gatherReviews',
-  outputSchema: z.object({
-    reviews: z.array(z.object({
-      site: z.string(),
-      content: z.string(),
-      url: z.string(),
-    })),
-  }),
-  execute: async ({ context }) => {
-    const { name } = context.triggerData as CompanyCandidate;
-    const prompt = `
-    以下の口コミサイト一覧に対して、各サイトのトップページにアクセスし、企業名 "${name}" で検索して口コミを取得してください。
-    サイト:
-    - openwork: https://www.openwork.jp/my_top
-    - 転職会議: https://jobtalk.jp/
-    - エンゲージ: https://en-hyouban.com/
-    - キャリコネ: https://careerconnection.jp/
-    - Yahoo! しごとカタログ: https://jobcatalog.yahoo.co.jp/
-    手順:
-    1. browser_navigate <サイトURL>
-    2. browser_snapshot
-    3. 検索窓に企業名 "${name}" を入力し、browser_click
-    4. 結果一覧に対して browser_snapshot
-    最終出力は以下のスキーマに従ったJSONとして返してください:
-    {
-      "reviews": [
-        { "site": string, "content": string, "url": string }
-      ]
-    }
-    `;
-    const res = await browserAutomationAgent.generate(prompt, {
-      output: z.object({
-        reviews: z.array(z.object({ site: z.string(), content: z.string(), url: z.string() })),
-      }),
-    });
-    return res.object;
-  },
-});
-
-const gatherBulletin = new Step({
-  id: 'gatherBulletin',
-  outputSchema: z.object({
-    bulletinPosts: z.array(z.object({
-      content: z.string(),
-      url: z.string(),
-    })),
-  }),
-  execute: async ({ context }) => {
-    const { name } = context.triggerData as CompanyCandidate;
-    const prompt = `以下の掲示板から企業名 ${name} の関連情報を取得してください:\n- itest.5ch.net\nbrowser_navigate -> browser_snapshot -> 検索 -> browser_snapshot`;
-    const res = await browserAutomationAgent.generate(prompt, {
-      output: z.object({
-        bulletinPosts: z.array(z.object({ content: z.string(), url: z.string() })),
-      }),
-    });
-    return res.object;
-  },
-});
-
-export const companyInfoWorkflow = new Workflow({
-  name: 'company-info-collection',
-  triggerSchema: z.object({
+// プロンプト生成Step（企業基本情報）
+const makeBasicInfoPrompt = createStep({
+  id: "makeBasicInfoPrompt",
+  inputSchema: z.object({
     corporateNumber: z.string(),
     name: z.string(),
     address: z.string(),
   }),
+  outputSchema: z.object({ prompt: z.string() }),
+  async execute({ inputData }) {
+    return {
+      prompt: `法人番号: ${inputData.corporateNumber}\n企業名: ${inputData.name}\n所在地: ${inputData.address}`,
+    };
+  },
 });
+const gatherBasicInfo = createStep(companyDataAgent);
 
-companyInfoWorkflow
-  .step(gatherBasicInfo)
+// プロンプト生成Step（社会保険）
+const makeInsurancePrompt = createStep({
+  id: "makeInsurancePrompt",
+  inputSchema: z.object({ corporateNumber: z.string() }),
+  outputSchema: z.object({ prompt: z.string() }),
+  async execute({ inputData }) {
+    return { prompt: `法人番号: ${inputData.corporateNumber}` };
+  },
+});
+const gatherInsurance = createStep(socialInsuranceAgent);
+
+// プロンプト生成Step（企業名のみ）
+const makeNamePrompt = createStep({
+  id: "makeNamePrompt",
+  inputSchema: z.object({ name: z.string() }),
+  outputSchema: z.object({ prompt: z.string() }),
+  async execute({ inputData }) {
+    return { prompt: inputData.name };
+  },
+});
+const gatherPressReleases = createStep(prtimesAgent);
+const gatherNikkeiNews = createStep(nikkeiAgent);
+const gatherApiNews = createStep(fetchNewsAgent);
+const gatherReviews = createStep(openworkAgent);
+const gatherBulletin = createStep(bulletinAgent);
+
+const workflow = createWorkflow({
+  id: "company-info-collection-vnext",
+  inputSchema: z.object({
+    corporateNumber: z.string(),
+    name: z.string(),
+    address: z.string(),
+  }),
+  outputSchema: z.object({
+    basic: z.any(),
+    insurance: z.any(),
+    pressReleases: z.any(),
+    news: z.any(),
+    reviews: z.any(),
+    bulletin: z.any(),
+  }),
+  steps: [
+    makeBasicInfoPrompt,
+    gatherBasicInfo,
+    makeInsurancePrompt,
+    gatherInsurance,
+    makeNamePrompt,
+    gatherPressReleases,
+    gatherNikkeiNews,
+    gatherApiNews,
+    gatherReviews,
+    gatherBulletin,
+  ],
+})
+  // 企業基本情報
+  .then(makeBasicInfoPrompt)
+  .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
+  .then(gatherBasicInfo)
+  // 社会保険
+  .map({ corporateNumber: { step: makeBasicInfoPrompt, path: "corporateNumber" } })
+  .then(makeInsurancePrompt)
+  .map({ prompt: { step: makeInsurancePrompt, path: "prompt" } })
   .then(gatherInsurance)
-  .then(gatherPressReleases)
-  .then(gatherNews)
-  .then(gatherReviews)
-  .then(gatherBulletin)
-  .commit(); 
+  // プレスリリース・ニュース・口コミ・掲示板は企業名のみ必要
+  .map({ name: { step: makeBasicInfoPrompt, path: "name" } })
+  .then(makeNamePrompt)
+  .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
+  .parallel([
+    gatherPressReleases,
+    gatherNikkeiNews,
+    gatherApiNews,
+    gatherReviews,
+    gatherBulletin,
+  ])
+  .map({
+    basic: { step: gatherBasicInfo, path: "text" },
+    insurance: { step: gatherInsurance, path: "text" },
+    pressReleases: { step: gatherPressReleases, path: "text" },
+    news: { step: gatherNikkeiNews, path: "text" }, // 必要に応じてAPIニュースも統合可
+    reviews: { step: gatherReviews, path: "text" },
+    bulletin: { step: gatherBulletin, path: "text" },
+  });
+
+export const companyInfoWorkflow = workflow.commit(); 
