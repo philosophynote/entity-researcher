@@ -1,88 +1,123 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { mcp } from '../mcp';
+import fetch from "node-fetch";
+import { parse, HTMLElement } from "node-html-parser";
 
-export const prTimesSearch = createTool({
-  id: 'prTimesSearch',
-  description: 'PR TIMES から企業のプレスリリース情報を取得します',
+/**
+ * PRTIMESのURLからサブタイトルと本文を抽出するツール
+ */
+export const prtimesExtract = createTool({
+  id: 'prtimesExtract',
+  description: 'PRTIMESのURLからサブタイトルと本文を抽出します',
   inputSchema: z.object({
-    companyName: z.string().describe('企業名'),
+    url: z.string().url().describe('PRTIMES記事のURL')
   }),
-  outputSchema: z
-    .array(
-      z.object({
-        title: z.string().describe('プレスリリースタイトル'),
-        date: z.string().describe('リリース日 (YYYY-MM-DD)'),
-        url: z.string().describe('リリースURL'),
-      }),
-    )
-    .describe('プレスリリース情報の配列'),
-  execute: async ({ context: { companyName } }) => {
-    /* ==== Playwright MCP ツールハンドル取得 ==== */
-    const tools = await mcp.getTools();
-    const navigate = tools["playwright_browser_navigate"];
-    const waitFor = tools["playwright_page_wait_for"];
-    const fill = tools["playwright_page_fill"];
-    const press = tools["playwright_keyboard_press"];
-    const evaluate = tools["playwright_page_evaluate"];
-    console.log("prTimesSearch")
-    /* ==== 1. TOP へアクセス ==== */
-    await navigate({ url: 'https://prtimes.jp/' });
-    await waitFor({ selector: 'input[name="search_word"]' });
-    console.log("prTimesSearch 1")
-    /* ==== 2. キーワード検索 ==== */
-    await fill({ selector: 'input[name="search_word"]', text: companyName });
-    await press({ key: 'Enter' });
-    console.log("prTimesSearch 2")
-
-    /* 検索結果ページのロード待ち */
-    await waitFor({ selector: 'time.date' }); // 各カードの日付要素
-    console.log("prTimesSearch 3")
-    /* ==== 3. 直近 6 か月分を抽出 ==== */
-    const todayISO = '2025-05-11';
-    const news = await evaluate({
-      // ブラウザ側で実行する関数
-      fn: ({
-        todayISO,
-      }: {
-        todayISO: string;
-      }): { title: string; date: string; url: string }[] => {
-        /* 日付範囲計算 */
-        const today = new Date(todayISO);
-        const sixMonthsAgo = new Date(today);
-        sixMonthsAgo.setMonth(today.getMonth() - 6);
-
-        const results: { title: string; date: string; url: string }[] = [];
-        document.querySelectorAll('time.date').forEach((timeEl) => {
-          const raw = timeEl.textContent?.trim() ?? '';
-          const m = raw.match(/(\d{4})年(\d{2})月(\d{2})日/);
-          if (!m) return;
-
-          const [_, y, mo, d] = m;
-          const iso = `${y}-${mo}-${d}`;
-          const dt = new Date(iso);
-          if (dt < sixMonthsAgo || dt > today) return;
-
-          const cardAnchor =
-            timeEl.closest<HTMLAnchorElement>('a') ||
-            timeEl.parentElement?.closest<HTMLAnchorElement>('a');
-          if (!cardAnchor) return;
-
-          const titleEl =
-            cardAnchor.querySelector<HTMLElement>('.list-title') ||
-            cardAnchor.querySelector<HTMLElement>('h3');
-          const title = titleEl?.textContent?.trim() ?? '';
-          const url = cardAnchor.href;
-
-          if (title && url) results.push({ title, date: iso, url });
-        });
-        return results;
-      },
-      args: { todayISO },
-    });
-
-    /* ==== 4. 出力 ==== */
-    // outputSchema に合わせて配列のみ返す
-    return news;
+  outputSchema: z.object({
+    subtitle: z.string().describe('記事のサブタイトル'),
+    body: z.string().describe('記事本文')
+  }),
+  execute: async ({ context: { url } }) => {
+    const [subtitle, body] = await scrapeSubTitleAndBody(url);
+    return { subtitle, body };
   },
 });
+
+/**
+ * 指定URLからサブタイトルと本文を抽出する
+ * @param url 対象のURL
+ * @param shouldNotify エラー時に通知するか（現状はconsoleのみ）
+ * @returns [サブタイトル, 本文]（どちらか取得失敗時は空文字）
+ */
+export async function scrapeSubTitleAndBody(
+  url: string,
+  shouldNotify = false
+): Promise<[string, string]> {
+  let attempts = 0;
+  const MAX_RETRY = 3;
+  let lastError: unknown = null;
+
+  // セレクタ定義（必要に応じて調整）
+  const STYLE = "style";
+  const SUB_TITLE = "h2 span";
+  const COMPANY_NAME = ".company-name";
+  const BODY = "#press-release-body";
+  const COMPANY_OVERVIEW = 'div[class^="press-release-layout_bottoms"]';
+
+  while (attempts < MAX_RETRY) {
+    try {
+      // HTML取得
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+      if (res.status === 404) {
+        console.error(`404 Not Found: URL=${url}`);
+        return ["", ""];
+      }
+      const html = await res.text();
+      // node-html-parserでパース
+      const root = parse(html);
+
+      // styleタグを削除
+      root.querySelectorAll(STYLE).forEach((el: HTMLElement) => el.remove());
+
+      const tmpSubTitle = root.querySelector(SUB_TITLE)?.textContent ?? "";
+      const companyName = root.querySelector(COMPANY_NAME)?.textContent ?? "";
+      const bodyNode = root.querySelector(BODY);
+      if (!bodyNode) {
+        throw new Error("BODY selector returned empty");
+      }
+      const tmpBody = bodyNode.textContent ?? "";
+      const companyOverview = root.querySelector(COMPANY_OVERVIEW);
+      const overviewCompanyName = scrapeOverviewCompanyName(companyOverview);
+      const representativeName = scrapeRepresentativeName(companyOverview);
+
+      // サブタイトル・本文の整形
+      const subTitle = tmpSubTitle.replace(/[\n\s　]/g, "").replace(/&nbsp/g, "");
+      const body = `【${companyName}】${tmpBody}【${overviewCompanyName}】【${representativeName}】`
+        .replace(/[\n\s　]/g, "")
+        .replace(/&nbsp/g, "");
+      return [subTitle, body];
+    } catch (e) {
+      lastError = e;
+      attempts++;
+      if (e instanceof Error && e.message.includes("BODY selector returned empty")) {
+        console.error(`BodyMissingError: URL=${url}`);
+        if (!shouldNotify) return ["", ""];
+        if (attempts < MAX_RETRY) {
+          console.warn(`BodyMissingError リトライ ${attempts}/${MAX_RETRY}: URL=${url}, error=${e.message}`);
+          await new Promise((r) => setTimeout(r, 2 ** attempts * 1000));
+          continue;
+        } else {
+          console.error(`BodyMissingError が連続したため処理をスキップ: URL=${url}, error=${e.message}`);
+          return ["", ""];
+        }
+      } else {
+        if (shouldNotify) {
+          // 通知処理を追加する場合はここに
+        } else {
+          console.error(`記事の取得またはパースに失敗しました: ${e instanceof Error ? e.message : e}`);
+        }
+        return ["", ""];
+      }
+    }
+  }
+  return ["", ""];
+}
+
+/**
+ * 会社概要から会社名を抽出（仮実装: 適宜修正）
+ */
+function scrapeOverviewCompanyName(companyOverview: HTMLElement | null): string {
+  if (!companyOverview) return "";
+  const name = companyOverview.querySelector(".name");
+  return name?.textContent ?? "";
+}
+
+/**
+ * 会社概要から代表者名を抽出（仮実装: 適宜修正）
+ */
+function scrapeRepresentativeName(companyOverview: HTMLElement | null): string {
+  if (!companyOverview) return "";
+  const rep = companyOverview.querySelector(".rep");
+  return rep?.textContent ?? "";
+}
