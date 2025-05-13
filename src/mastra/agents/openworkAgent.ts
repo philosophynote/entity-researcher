@@ -20,7 +20,7 @@ export const openworkAgent = new Agent({
   tools: await mcp.getTools(),
   instructions: `
   あなたは会社口コミを検索するエージェントです。
-  openworkにplaywrightを操作して口コミを検索してください。
+  エンゲージ 会社の評判にplaywrightを操作して過去3年間の口コミを検索してください。
   今日の日付は${new Date().toISOString().split('T')[0]}です。
   検索結果はTypeScript型 WorkReview のJSON配列として返してください。
   `,

@@ -6,7 +6,8 @@ import { companyDataAgent } from './agents/companyDataAgent';
 import { companyInfoWorkflow } from './workflows/companyInfoWorkflow';
 import { prtimesAgent } from './agents/prtimesAgent';
 import { nikkeiAgent } from './agents/nikkeiAgent';
-import { openworkAgent } from './agents/openworkAgent';
+import { threadAgent } from './agents/threadAgent';
+import { socialInsuranceAgent } from './agents/socialInsuranceAgent';
 
 export const mastra = new Mastra({
   agents: {
@@ -15,7 +16,8 @@ export const mastra = new Mastra({
     companyData: companyDataAgent,
     prtimesAgent: prtimesAgent,
     nikkeiAgent: nikkeiAgent,
-    openworkAgent: openworkAgent,
+    threadAgent: threadAgent,
+    socialInsuranceAgent: socialInsuranceAgent,
   },
   workflows: {
     companyInfoWorkflow,
