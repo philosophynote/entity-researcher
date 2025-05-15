@@ -1,4 +1,4 @@
-import { createWorkflow, createStep } from "@mastra/core/workflows/vNext";
+import { Workflow } from "@mastra/core/workflows";
 import { z } from "zod";
 import { companyDataAgent } from '../agents/companyDataAgent';
 import { socialInsuranceAgent } from '../agents/socialInsuranceAgent';
@@ -8,14 +8,30 @@ import { fetchNewsAgent } from '../agents/fetchNewsAgent';
 import { openworkAgent } from '../agents/openworkAgent';
 import { bulletinAgent } from '../agents/bulletinAgent';
 
+// ワークフロー型注釈用
+const workflowId = "company-info-collection-vnext" as const;
+const workflowInputSchema = z.object({
+  corporateNumber: z.string(),
+  name: z.string(),
+  address: z.string(),
+});
+const workflowOutputSchema = z.object({
+  basic: z.any(),
+  insurance: z.any(),
+  pressReleases: z.any(),
+  news: z.any(),
+  reviews: z.any(),
+  bulletin: z.any(),
+});
+
+type WorkflowInput = z.infer<typeof workflowInputSchema>;
+type WorkflowOutput = z.infer<typeof workflowOutputSchema>;
+
 // プロンプト生成Step（企業基本情報）
+import { createStep } from "@mastra/core/workflows/vNext";
 const makeBasicInfoPrompt = createStep({
   id: "makeBasicInfoPrompt",
-  inputSchema: z.object({
-    corporateNumber: z.string(),
-    name: z.string(),
-    address: z.string(),
-  }),
+  inputSchema: workflowInputSchema,
   outputSchema: z.object({ prompt: z.string() }),
   async execute({ inputData }) {
     return {
@@ -51,61 +67,87 @@ const gatherApiNews = createStep(fetchNewsAgent);
 const gatherReviews = createStep(openworkAgent);
 const gatherBulletin = createStep(bulletinAgent);
 
-const workflow = createWorkflow({
-  id: "company-info-collection-vnext",
-  inputSchema: z.object({
-    corporateNumber: z.string(),
-    name: z.string(),
-    address: z.string(),
-  }),
-  outputSchema: z.object({
-    basic: z.any(),
-    insurance: z.any(),
-    pressReleases: z.any(),
-    news: z.any(),
-    reviews: z.any(),
-    bulletin: z.any(),
-  }),
-  steps: [
-    makeBasicInfoPrompt,
-    gatherBasicInfo,
-    makeInsurancePrompt,
-    gatherInsurance,
-    makeNamePrompt,
-    gatherPressReleases,
-    gatherNikkeiNews,
-    gatherApiNews,
-    gatherReviews,
-    gatherBulletin,
-  ],
+// WorkflowクラスでvNextワークフローを定義
+export const workflow: Workflow = new Workflow({
+  name: workflowId,
+  triggerSchema: workflowInputSchema,
 })
-  // 企業基本情報
-  .then(makeBasicInfoPrompt)
-  .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
-  .then(gatherBasicInfo)
-  // 社会保険
-  .map({ corporateNumber: { step: makeBasicInfoPrompt, path: "corporateNumber" } })
-  .then(makeInsurancePrompt)
-  .map({ prompt: { step: makeInsurancePrompt, path: "prompt" } })
-  .then(gatherInsurance)
-  // プレスリリース・ニュース・口コミ・掲示板は企業名のみ必要
-  .map({ name: { step: makeBasicInfoPrompt, path: "name" } })
-  .then(makeNamePrompt)
-  .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
-  .parallel([
+  // 基本情報プロンプト生成
+  .step(makeBasicInfoPrompt)
+  // 企業基本情報取得
+  .step(gatherBasicInfo, {
+    variables: {
+      prompt: { step: makeBasicInfoPrompt, path: 'prompt' },
+    },
+  })
+  // 社会保険プロンプト生成
+  .step(makeInsurancePrompt, {
+    variables: {
+      corporateNumber: { step: 'trigger', path: 'corporateNumber' },
+    },
+  })
+  // 社会保険情報取得
+  .step(gatherInsurance, {
+    variables: {
+      prompt: { step: makeInsurancePrompt, path: 'prompt' },
+    },
+  })
+  // 企業名プロンプト生成
+  .step(makeNamePrompt, {
+    variables: {
+      name: { step: 'trigger', path: 'name' },
+    },
+  })
+  // 並列分岐
+  .after(makeNamePrompt)
+    .step(gatherPressReleases, {
+      variables: {
+        prompt: { step: makeNamePrompt, path: 'prompt' },
+      },
+    })
+    .step(gatherNikkeiNews, {
+      variables: {
+        prompt: { step: makeNamePrompt, path: 'prompt' },
+      },
+    })
+    .step(gatherApiNews, {
+      variables: {
+        prompt: { step: makeNamePrompt, path: 'prompt' },
+      },
+    })
+    .step(gatherReviews, {
+      variables: {
+        prompt: { step: makeNamePrompt, path: 'prompt' },
+      },
+    })
+    .step(gatherBulletin, {
+      variables: {
+        prompt: { step: makeNamePrompt, path: 'prompt' },
+      },
+    })
+  // 集約ステップ
+  .after([
     gatherPressReleases,
     gatherNikkeiNews,
     gatherApiNews,
     gatherReviews,
     gatherBulletin,
   ])
-  .map({
-    basic: { step: gatherBasicInfo, path: "text" },
-    insurance: { step: gatherInsurance, path: "text" },
-    pressReleases: { step: gatherPressReleases, path: "text" },
-    news: { step: gatherNikkeiNews, path: "text" }, // 必要に応じてAPIニュースも統合可
-    reviews: { step: gatherReviews, path: "text" },
-    bulletin: { step: gatherBulletin, path: "text" },
-  });
-
-export const companyInfoWorkflow = workflow.commit(); 
+  .step({
+    id: "aggregateResult",
+    outputSchema: workflowOutputSchema,
+    /**
+     * 各ステップの出力を集約して返却
+     */
+    async execute({ context }): Promise<WorkflowOutput> {
+      return {
+        basic: context.steps.gatherBasicInfo.output.text,
+        insurance: context.steps.gatherInsurance.output.text,
+        pressReleases: context.steps.gatherPressReleases.output.text,
+        news: context.steps.gatherNikkeiNews.output.text,
+        reviews: context.steps.gatherReviews.output.text,
+        bulletin: context.steps.gatherBulletin.output.text,
+      };
+    },
+  })
+  .commit();
