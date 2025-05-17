@@ -38,7 +38,7 @@ const companyDataStep = createStep(companyDataAgent);
 
 /* --- Workflow ------------------------------------------------------ */
 const _workflow = createWorkflow({
-  id: "company-info-collection-vnext",
+  id: "company-info-workflow",
   inputSchema: workflowInputSchema,
   outputSchema: workflowOutputSchema,
   steps: [makeBasicInfoPrompt, companyDataStep],
