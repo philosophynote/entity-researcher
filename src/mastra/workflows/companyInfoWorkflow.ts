@@ -7,6 +7,7 @@ import { prtimesAgent } from "../agents/prtimesAgent";
 import { nikkeiAgent } from "../agents/nikkeiAgent";
 // import { bulletinAgent } from "../agents/bulletinAgent";
 import { fetchNewsAgent } from "../agents/fetchNewsAgent";
+import { classifyRiskAgent } from "../agents/classifyRiskAgent";
 
 /* --- I/O スキーマ -------------------------------------------------- */
 const workflowInputSchema = z.object({
@@ -87,6 +88,58 @@ const prtimesStep = createStep(prtimesAgent);
 const nikkeiNewsStep = createStep(nikkeiAgent);
 // const bulletinStep = createStep(bulletinAgent);
 const fetchNewsStep = createStep(fetchNewsAgent);
+const classifyRiskStep = createStep({
+  id: "classifyRiskStep",
+  description: "プレスリリースURLごとにリスク判定を実施",
+  inputSchema: z.object({
+    pressReleases: z.array(
+      z.object({
+        title: z.string(),
+        date: z.string(),
+        url: z.string(),
+      })
+    ),
+  }),
+  outputSchema: z.array(
+    z.object({
+      url: z.string(),
+      label: z.string(),
+      reason: z.string(),
+    })
+  ),
+  execute: async ({ inputData }) => {
+    const results = [];
+    for (const pr of inputData.pressReleases) {
+      // URLをそのままuserメッセージとして渡す
+      const res = await classifyRiskAgent.generate([`URL: ${pr.url}`]);
+      // 返却値のtextからラベルと理由を抽出
+      const text = res.text || "";
+      const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
+      const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
+      results.push({
+        url: pr.url,
+        label: labelMatch ? labelMatch[1] : "",
+        reason: reasonMatch ? reasonMatch[1] : text,
+      });
+    }
+    return results;
+  },
+});
+
+const parsePressReleasesStep = createStep({
+  id: "parsePressReleasesStep",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: z.object({
+    pressReleases: z.array(z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    })),
+  }),
+  execute: async ({ inputData }) => ({
+    pressReleases: JSON.parse(inputData.text),
+  }),
+});
 
 const aggregateResultsStep = createStep({
   id: "aggregateResults",
@@ -111,10 +164,13 @@ const _workflow = createWorkflow({
   inputSchema: workflowInputSchema,
   outputSchema: workflowOutputSchema,
   steps: [
+    makeNamePrompt,
     makeBasicInfoPrompt,
     companyDataStep,
     socialInsuranceStep,
     prtimesStep,
+    parsePressReleasesStep,
+    classifyRiskStep,
     nikkeiNewsStep,
     // bulletinStep,
     fetchNewsStep,
@@ -123,11 +179,15 @@ const _workflow = createWorkflow({
 })
 
 export const companyInfoWorkflow = _workflow
-  .then(makeBasicInfoPrompt)
-  .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
-  .then(prtimesStep)
+  .then(makeNamePrompt)
   .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
-  .then(socialInsuranceStep)
-  .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
+  .then(prtimesStep)
+  .map({ text: { step: prtimesStep, path: "text" } })
+  .then(parsePressReleasesStep)
+  .map({ pressReleases: { step: parsePressReleasesStep, path: "pressReleases" } })
+  .then(classifyRiskStep)
+  .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
+  // .then(socialInsuranceStep)
+  // .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
   .commit();
 
