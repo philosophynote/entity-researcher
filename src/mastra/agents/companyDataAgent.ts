@@ -28,16 +28,16 @@ export type CompanyData = {
   overview: string;
 };
 
+const allTools = await mcp.getTools();
+
+const filteredTools = Object.fromEntries(
+  Object.entries(allTools).filter(([toolName]) => toolName === "perplexity-ask_perplexity_ask"),
+);
+
 export const companyDataAgent = new Agent({
   name: 'CompanyDataAgent',
   model,
-  tools: async () => {
-    // すべてのツールからperplexity-ask_perplexity_askのみ抽出
-    const allTools = await mcp.getTools();
-    return {
-      "perplexity-ask_perplexity_ask": allTools["perplexity-ask_perplexity_ask"],
-    };
-  },
+  tools: filteredTools,
   instructions: `
   あなたは企業情報収集エージェントです。
   WEBサイトで次の情報を検索してください。

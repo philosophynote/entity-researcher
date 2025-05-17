@@ -8,7 +8,7 @@ import { socialInsuranceAgent } from './agents/socialInsuranceAgent';
 import { fetchNewsAgent } from './agents/fetchNewsAgent';
 import { classifyRiskAgent } from './agents/classifyRiskAgent';
 import { bulletinAgent } from './agents/bulletinAgent';
-import { workflow } from './workflows/companyInfoWorkflow';
+import { companyInfoWorkflow } from './workflows/companyInfoWorkflow';
 
 
 export const mastra = new Mastra({
@@ -22,8 +22,8 @@ export const mastra = new Mastra({
     classifyRiskAgent: classifyRiskAgent,
     bulletinAgent: bulletinAgent,
   },
-  workflows: {
-    companyInfo: workflow,
+  vnext_workflows: {
+    companyInfoWorkflow,
   },
   logger: createLogger({
     name: "Mastra",
