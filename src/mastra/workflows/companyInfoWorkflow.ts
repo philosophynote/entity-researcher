@@ -2,6 +2,11 @@
 import { z } from "zod";
 import { createWorkflow, createStep } from "@mastra/core/workflows/vNext";
 import { companyDataAgent } from "../agents/companyDataAgent";
+import { socialInsuranceAgent } from "../agents/socialInsuranceAgent";
+import { prtimesAgent } from "../agents/prtimesAgent";
+import { nikkeiAgent } from "../agents/nikkeiAgent";
+// import { bulletinAgent } from "../agents/bulletinAgent";
+import { fetchNewsAgent } from "../agents/fetchNewsAgent";
 
 /* --- I/O スキーマ -------------------------------------------------- */
 const workflowInputSchema = z.object({
@@ -20,6 +25,37 @@ const workflowOutputSchema = z.object({
     founded: z.string(),
     overview: z.string(),
   }),
+  socialInsurance: z.object({
+    insuredStatus: z.union([z.literal("加入中"), z.literal("未加入")]),
+    insuredCount: z.number(),
+  }),
+  pressReleases: z.array(
+    z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    }),
+  ),
+  news: z.array(
+    z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    }),
+  ),
+  // bulletin: z.array(
+  //   z.object({
+  //     comment: z.string(),
+  //     url: z.string(),
+  //   }),
+  // ),
+  fetchNews: z.array(
+    z.object({
+      title: z.string(),
+      publishDate: z.string(),
+      url: z.string(),
+    }),
+  ),
 });
 
 /* --- Step 定義 ----------------------------------------------------- */
@@ -34,21 +70,64 @@ const makeBasicInfoPrompt = createStep({
   }),
 });
 
+const makeNamePrompt = createStep({
+  id: "makeBasicInfoPrompt",
+  description:
+    "企業名を企業情報収集エージェント向けに渡す",
+  inputSchema: workflowInputSchema,
+  outputSchema: z.object({ prompt: z.string() }),
+  execute: async ({ inputData }) => ({
+    prompt: `${inputData.name}`,
+  }),
+});
+
 const companyDataStep = createStep(companyDataAgent);
+const socialInsuranceStep = createStep(socialInsuranceAgent);
+const prtimesStep = createStep(prtimesAgent);
+const nikkeiNewsStep = createStep(nikkeiAgent);
+// const bulletinStep = createStep(bulletinAgent);
+const fetchNewsStep = createStep(fetchNewsAgent);
+
+const aggregateResultsStep = createStep({
+  id: "aggregateResults",
+  description: "前のステップの出力を集約してワークフローの出力スキーマに適合させる",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: workflowOutputSchema,
+  execute: async (params) => {
+    const ctx = (params as any).context;
+    return {
+      basic: ctx.steps[companyDataStep.id as string].output,
+      socialInsurance: ctx.steps[socialInsuranceStep.id as string].output,
+      pressReleases: ctx.steps[prtimesStep.id as string].output,
+      news: ctx.steps[nikkeiNewsStep.id as string].output,
+      fetchNews: ctx.steps[fetchNewsStep.id as string].output,
+    } as z.infer<typeof workflowOutputSchema>;
+  },
+});
 
 /* --- Workflow ------------------------------------------------------ */
 const _workflow = createWorkflow({
   id: "company-info-workflow",
   inputSchema: workflowInputSchema,
   outputSchema: workflowOutputSchema,
-  steps: [makeBasicInfoPrompt, companyDataStep],
+  steps: [
+    makeBasicInfoPrompt,
+    companyDataStep,
+    socialInsuranceStep,
+    prtimesStep,
+    nikkeiNewsStep,
+    // bulletinStep,
+    fetchNewsStep,
+    aggregateResultsStep,
+  ],
 })
 
 export const companyInfoWorkflow = _workflow
-  .then(makeBasicInfoPrompt)   // 処理の順序を明示
-  .map({
-    prompt: { step: makeBasicInfoPrompt, path: "prompt" }
-  })
-  .then(companyDataStep)
-  .commit();                   // ← これを忘れると UI に出ない
+  .then(makeBasicInfoPrompt)
+  .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
+  .then(prtimesStep)
+  .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
+  .then(socialInsuranceStep)
+  .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
+  .commit();
 
