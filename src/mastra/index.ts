@@ -9,10 +9,12 @@ import { socialInsuranceAgent } from './agents/socialInsuranceAgent';
 import { fetchNewsAgent } from './agents/fetchNewsAgent';
 import { classifyRiskAgent } from './agents/classifyRiskAgent';
 import { bulletinAgent } from './agents/bulletinAgent';
+import { browserAgent } from './agents/browserAgent';
 import { companyInfoWorkflow } from './workflows/companyInfoWorkflow';
 import { classifyIndustryAgent } from './agents/classifyIndustryAgent';
-import { prFlow, newsFlow, prAndNewsParallelWorkflow, socialInsuranceFlow } from './workflows/prAndNewsParallelWorkflow';
+import { prFlow, newsFlow, prAndNewsParallelWorkflow } from './workflows/prAndNewsParallelWorkflow';
 import { companyDataWorkflow } from './workflows/companyDataWorkflow';
+import { nenkinCorporateSearch } from './workflows/nenkinCorporateSearch';
 
 
 export const mastra = new Mastra({
@@ -23,6 +25,7 @@ export const mastra = new Mastra({
     prtimesApiAgent: prtimesApiAgent,
     nikkeiAgent: nikkeiAgent,
     socialInsuranceAgent: socialInsuranceAgent,
+    browserAgent: browserAgent,
     fetchNewsAgent: fetchNewsAgent,
     classifyRiskAgent: classifyRiskAgent,
     bulletinAgent: bulletinAgent,
@@ -33,8 +36,8 @@ export const mastra = new Mastra({
     prAndNewsParallelWorkflow,
     prFlow,
     newsFlow,
-    socialInsuranceFlow,
     companyDataWorkflow,
+    nenkinCorporateSearch,
   },
   logger: createLogger({
     name: "Mastra",
