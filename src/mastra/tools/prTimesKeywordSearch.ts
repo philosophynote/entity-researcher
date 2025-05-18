@@ -59,7 +59,8 @@ export const prtimesKeywordSearch = createTool({
     const releases: PrTimesReleaseRaw[] = Array.isArray(data?.data?.release_list) ? data.data.release_list : [];
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    return (releases
+    // プレスリリースを構造化し、半年以内のものを取得
+    const items: Array<{ title: string; date: string; url: string }> = releases
       .map((r: PrTimesReleaseRaw): Release => ({
         title: r.title,
         dateObj: parseJapaneseDate(r.released_at),
@@ -70,7 +71,11 @@ export const prtimesKeywordSearch = createTool({
         title: r.title,
         date: r.dateObj.toISOString(),
         url: r.url,
-      }))
+      }));
+    // URLで重複排除（一番最初の出現を残す）
+    const uniqueItems = items.filter((item, index, array) =>
+      array.findIndex(x => x.url === item.url) === index
     );
+    return uniqueItems;
   },
 });

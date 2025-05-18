@@ -30,7 +30,6 @@ export const fetchNewsByCompany = createTool({
   execute: async ({ context: { companyName } }) => {
     const apiKey = process.env.NEWS_API_KEY;
     if (!apiKey) throw new Error('環境変数 NEWS_API_KEY が未設定です');
-
     // NEWS APIで日本のビジネスニュースを取得
     const params = new URLSearchParams({
       q: companyName,
@@ -38,13 +37,10 @@ export const fetchNewsByCompany = createTool({
       pageSize: '50',
       apiKey,
     });
-    console.log(`https://newsapi.org/v2/everything?${params.toString()}`);
     const res = await fetch(`https://newsapi.org/v2/everything?${params.toString()}`);
-    console.log(res);
     if (!res.ok) throw new Error(`NewsAPI request failed: ${res.status} ${res.statusText}`);
-
+    console.log("イエーイ！");
     const data = await res.json() as { status: string; articles: Article[] };
-    console.log(data);
     if (data.status !== 'ok') throw new Error('NewsAPI returned non-ok status');
 
     // 企業名を含み、日本語タイトルの記事のみ返す
