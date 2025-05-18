@@ -43,12 +43,8 @@
 
 - ネットで取得
   - プレスリリース情報
-    - PlaywrightのMCPサーバー経由で[PR TIMES](https://prtimes.jp/)から半年間のプレスリリース情報を取得
-  - 企業関連ニュース
-    - PlaywrightのMCPサーバー経由で[日本経済新聞](https://www.nikkei.com/)から該当企業のニュースを取得
-    - NEWS APIを利用して該当企業のニュースを取得
-  - 匿名掲示板情報
-    - [5ch](https://itest.5ch.net/)から関連情報を取得
+    - [PR TIMES](https://prtimes.jp/)から半年間のプレスリリース情報を取得
+  - NEWS APIを利用して該当企業のニュースを取得
   - 上記で取得した情報のリスクレベルを判定
 
 ---

@@ -13,8 +13,8 @@ export const prtimesApiAgent = new Agent({
   model: openai('gpt-4.1-mini'),
   tools: { prtimesKeywordSearch },
   instructions: `
-あなたはPR TIMESのAPIを利用してプレスリリースを検索するエージェントです。
-与えられたキーワードで過去半年分のプレスリリースをprtimesKeywordSearchツールで取得してください。
-検索結果はTypeScript型 PressRelease のJSON配列として返してください。
+  あなたはPR TIMESのAPIを利用してプレスリリースを検索するエージェントです。
+  与えられたキーワードで過去半年分のプレスリリースをprtimesKeywordSearchツールで取得してください。
+  結果（JSON配列）は必ずそのまま返却して下さい。文章や説明文は不要です。
   `,
 });

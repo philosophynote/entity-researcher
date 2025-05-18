@@ -4,6 +4,7 @@ import { createWorkflow, createStep } from "@mastra/core/workflows/vNext";
 import { companyDataAgent } from "../agents/companyDataAgent";
 import { socialInsuranceAgent } from "../agents/socialInsuranceAgent";
 import { prtimesAgent } from "../agents/prtimesAgent";
+import { prtimesApiAgent } from "../agents/prtimesApiAgent";
 import { nikkeiAgent } from "../agents/nikkeiAgent";
 // import { bulletinAgent } from "../agents/bulletinAgent";
 import { fetchNewsAgent } from "../agents/fetchNewsAgent";
@@ -71,7 +72,7 @@ const makeBasicInfoPrompt = createStep({
   }),
 });
 
-const makeNamePrompt = createStep({
+export const makeNamePrompt = createStep({
   id: "makeNamePrompt",
   description:
     "企業名を企業情報収集エージェント向けに渡す",
@@ -85,10 +86,11 @@ const makeNamePrompt = createStep({
 const companyDataStep = createStep(companyDataAgent);
 const socialInsuranceStep = createStep(socialInsuranceAgent);
 const prtimesStep = createStep(prtimesAgent);
+export const prtimesApiStep = createStep(prtimesApiAgent);
 const nikkeiNewsStep = createStep(nikkeiAgent);
 // const bulletinStep = createStep(bulletinAgent);
-const fetchNewsStep = createStep(fetchNewsAgent);
-const classifyRiskStep = createStep({
+export const fetchNewsStep = createStep(fetchNewsAgent);
+export const classifyRiskStep = createStep({
   id: "classifyRiskStep",
   description: "プレスリリースURLごとにリスク判定を実施",
   inputSchema: z.object({
@@ -126,7 +128,7 @@ const classifyRiskStep = createStep({
   },
 });
 
-const parsePressReleasesStep = createStep({
+export const parsePressReleasesStep = createStep({
   id: "parsePressReleasesStep",
   inputSchema: z.object({ text: z.string() }),
   outputSchema: z.object({
@@ -136,12 +138,14 @@ const parsePressReleasesStep = createStep({
       url: z.string(),
     })),
   }),
-  execute: async ({ inputData }) => ({
-    pressReleases: JSON.parse(inputData.text),
-  }),
+  execute: async ({ inputData }) => {
+    return {
+      pressReleases: JSON.parse(inputData.text),
+    };
+  },
 });
 
-const parseNewsStep = createStep({
+export const parseNewsStep = createStep({
   id: "parseNewsStep",
   inputSchema: z.object({ text: z.string() }),
   outputSchema: z.object({
@@ -151,12 +155,16 @@ const parseNewsStep = createStep({
       url: z.string(),
     })),
   }),
-  execute: async ({ inputData }) => ({
-    news: JSON.parse(inputData.text),
-  }),
+  execute: async ({ inputData }) => {
+    console.log('parseNewsStep inputData:', inputData);
+    console.log('parseNewsStep inputData.text:', inputData.text);
+    return {
+      news: JSON.parse(inputData.text),
+    };
+  },
 });
 
-const classifyNewsRiskStep = createStep({
+export const classifyNewsRiskStep = createStep({
   id: "classifyNewsRiskStep",
   description: "ニュースURLごとにリスク判定を実施",
   inputSchema: z.object({
@@ -210,7 +218,7 @@ const aggregateResultsStep = createStep({
 });
 
 /* --- Workflow ------------------------------------------------------ */
-const _workflow = createWorkflow({
+export const companyInfoWorkflow = createWorkflow({
   id: "company-info-workflow",
   inputSchema: workflowInputSchema,
   outputSchema: workflowOutputSchema,
@@ -220,6 +228,7 @@ const _workflow = createWorkflow({
     companyDataStep,
     socialInsuranceStep,
     prtimesStep,
+    prtimesApiStep,
     parsePressReleasesStep,
     classifyRiskStep,
     fetchNewsStep,
@@ -229,14 +238,12 @@ const _workflow = createWorkflow({
     // bulletinStep,
     aggregateResultsStep,
   ],
-})
-
-export const companyInfoWorkflow = _workflow
-  // --- PR TIMES系 流れ ---
-  .then(makeNamePrompt)
+}).then(makeNamePrompt)
+  // makeNamePromptの出力のうち、次のstepに渡すものを指定
   .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
-  .then(prtimesStep)
-  .map({ text: { step: prtimesStep, path: "text" } })
+  .then(prtimesApiStep)
+  // prtimesApiStepの出力のうち、次のstepに渡すものを指定
+  .map({ text: { step: prtimesApiStep, path: "text" } })
   .then(parsePressReleasesStep)
   .map({ pressReleases: { step: parsePressReleasesStep, path: "pressReleases" } })
   // --- ニュース系 流れ ---
@@ -254,6 +261,7 @@ export const companyInfoWorkflow = _workflow
     pressReleaseRisks: { step: classifyRiskStep, path: "output" },
     newsRisks:         { step: classifyNewsRiskStep, path: "output" },
   })
-  .then(aggregateResultsStep)
+  // .then(aggregateResultsStep)
   .commit();
+
 
