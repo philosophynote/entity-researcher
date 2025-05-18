@@ -72,7 +72,7 @@ const makeBasicInfoPrompt = createStep({
 });
 
 const makeNamePrompt = createStep({
-  id: "makeBasicInfoPrompt",
+  id: "makeNamePrompt",
   description:
     "企業名を企業情報収集エージェント向けに渡す",
   inputSchema: workflowInputSchema,
