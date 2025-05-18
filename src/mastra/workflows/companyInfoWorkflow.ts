@@ -141,6 +141,57 @@ const parsePressReleasesStep = createStep({
   }),
 });
 
+const parseNewsStep = createStep({
+  id: "parseNewsStep",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: z.object({
+    news: z.array(z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    })),
+  }),
+  execute: async ({ inputData }) => ({
+    news: JSON.parse(inputData.text),
+  }),
+});
+
+const classifyNewsRiskStep = createStep({
+  id: "classifyNewsRiskStep",
+  description: "ニュースURLごとにリスク判定を実施",
+  inputSchema: z.object({
+    news: z.array(
+      z.object({
+        title: z.string(),
+        date: z.string(),
+        url: z.string(),
+      })
+    ),
+  }),
+  outputSchema: z.array(
+    z.object({
+      url: z.string(),
+      label: z.string(),
+      reason: z.string(),
+    })
+  ),
+  execute: async ({ inputData }) => {
+    const results: { url: string; label: string; reason: string; }[] | PromiseLike<{ url: string; label: string; reason: string; }[]> = [];
+    for (const n of inputData.news) {
+      const res = await classifyRiskAgent.generate([`URL: ${n.url}`]);
+      const text = res.text || "";
+      const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
+      const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
+      results.push({
+        url: n.url,
+        label: labelMatch ? labelMatch[1] : "",
+        reason: reasonMatch ? reasonMatch[1] : text,
+      });
+    }
+    return results;
+  },
+});
+
 const aggregateResultsStep = createStep({
   id: "aggregateResults",
   description: "前のステップの出力を集約してワークフローの出力スキーマに適合させる",
@@ -171,23 +222,38 @@ const _workflow = createWorkflow({
     prtimesStep,
     parsePressReleasesStep,
     classifyRiskStep,
+    fetchNewsStep,
+    parseNewsStep,
+    classifyNewsRiskStep,
     nikkeiNewsStep,
     // bulletinStep,
-    fetchNewsStep,
     aggregateResultsStep,
   ],
 })
 
 export const companyInfoWorkflow = _workflow
+  // --- PR TIMES系 流れ ---
   .then(makeNamePrompt)
   .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
   .then(prtimesStep)
   .map({ text: { step: prtimesStep, path: "text" } })
   .then(parsePressReleasesStep)
   .map({ pressReleases: { step: parsePressReleasesStep, path: "pressReleases" } })
-  .then(classifyRiskStep)
+  // --- ニュース系 流れ ---
   .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
-  // .then(socialInsuranceStep)
-  // .map({ prompt: { step: makeBasicInfoPrompt, path: "prompt" } })
+  .then(fetchNewsStep)
+  .map({ text: { step: fetchNewsStep, path: "text" } })
+  .then(parseNewsStep)
+  .map({ news: { step: parseNewsStep, path: "news" } })
+  // --- 並列化 ---
+  .parallel([
+    classifyRiskStep,
+    classifyNewsRiskStep,
+  ])
+  .map({
+    pressReleaseRisks: { step: classifyRiskStep, path: "output" },
+    newsRisks:         { step: classifyNewsRiskStep, path: "output" },
+  })
+  .then(aggregateResultsStep)
   .commit();
 

@@ -13,7 +13,7 @@ export const fetchNewsAgent = new Agent({
   },
   instructions: `
 あなたはNEWS APIを使って日本のビジネスニュースを検索するエージェントです。
-与えられた企業名でNEWS APIから最新のビジネスニュースを検索し、
+与えられた企業名の法人格を取り除いた名前でNEWS APIから最新のビジネスニュースを検索し、
 タイトル・公開日・URLの配列（TypeScript型: { title: string; date: string; url: string }[]）として返してください。
   `,
 }); 

@@ -16,21 +16,23 @@ export const fetchHtmlBody = createTool({
     body: z.string().describe('本文テキスト')
   }),
   execute: async ({ context: { url } }) => {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.4638.74 Safari/537.36",
-        "Accept-Language": "ja,en;q=0.8",
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} – ${res.statusText}`);
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.4638.74 Safari/537.36",
+          "Accept-Language": "ja,en;q=0.8",
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} – ${res.statusText}`);
+      }
+      const html = await res.text();
+      const root = parse(html);
+      const bodyText = root.querySelector('body')?.innerText.trim() ?? '';
+      return { body: bodyText };
+    } catch (e) {
+      console.error(`[fetchHtmlBody] error:`, e);
+      return { body: '' };
     }
-
-    const html = await res.text();
-    const root = parse(html);
-    const bodyText = root.querySelector('body')?.innerText.trim() ?? '';
-
-    return { body: bodyText };
   },
 });
