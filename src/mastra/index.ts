@@ -10,6 +10,7 @@ import { fetchNewsAgent } from './agents/fetchNewsAgent';
 import { classifyRiskAgent } from './agents/classifyRiskAgent';
 import { bulletinAgent } from './agents/bulletinAgent';
 import { companyInfoWorkflow } from './workflows/companyInfoWorkflow';
+import { prAndNewsParallelWorkflow } from './workflows/prAndNewsParallelWorkflow';
 
 
 export const mastra = new Mastra({
@@ -26,6 +27,7 @@ export const mastra = new Mastra({
   },
   vnext_workflows: {
     companyInfoWorkflow,
+    prAndNewsParallelWorkflow,
   },
   logger: createLogger({
     name: "Mastra",
