@@ -13,6 +13,7 @@ import { browserAgent } from './agents/browserAgent';
 import { companyInfoWorkflow } from './workflows/companyInfoWorkflow';
 import { prFlow, newsFlow, prAndNewsParallelWorkflow } from './workflows/prAndNewsParallelWorkflow';
 import { nenkinCorporateSearch } from './workflows/nenkinCorporateSearch';
+import { fullCompanyWorkflow } from './workflows/fullCompanyWorkflow';
 
 
 export const mastra = new Mastra({
@@ -34,6 +35,7 @@ export const mastra = new Mastra({
     prFlow,
     newsFlow,
     nenkinCorporateSearch,
+    fullCompanyWorkflow,
   },
   logger: createLogger({
     name: "Mastra",
