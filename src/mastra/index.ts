@@ -3,6 +3,7 @@ import { Mastra } from '@mastra/core';
 import { companyIdentifierAgent } from './agents/companyIdentifierAgent';
 import { companyDataAgent } from './agents/companyDataAgent';
 import { prtimesAgent } from './agents/prtimesAgent';
+import { prtimesApiAgent } from './agents/prtimesApiAgent';
 import { nikkeiAgent } from './agents/nikkeiAgent';
 import { socialInsuranceAgent } from './agents/socialInsuranceAgent';
 import { fetchNewsAgent } from './agents/fetchNewsAgent';
@@ -16,6 +17,7 @@ export const mastra = new Mastra({
     companyIdentifier: companyIdentifierAgent,
     companyData: companyDataAgent,
     prtimesAgent: prtimesAgent,
+    prtimesApiAgent: prtimesApiAgent,
     nikkeiAgent: nikkeiAgent,
     socialInsuranceAgent: socialInsuranceAgent,
     fetchNewsAgent: fetchNewsAgent,
