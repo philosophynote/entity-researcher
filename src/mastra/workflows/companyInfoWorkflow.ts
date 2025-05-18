@@ -2,6 +2,12 @@
 import { z } from "zod";
 import { createWorkflow, createStep } from "@mastra/core/workflows/vNext";
 import { companyDataAgent } from "../agents/companyDataAgent";
+import { socialInsuranceAgent } from "../agents/socialInsuranceAgent";
+import { prtimesAgent } from "../agents/prtimesAgent";
+import { nikkeiAgent } from "../agents/nikkeiAgent";
+// import { bulletinAgent } from "../agents/bulletinAgent";
+import { fetchNewsAgent } from "../agents/fetchNewsAgent";
+import { classifyRiskAgent } from "../agents/classifyRiskAgent";
 
 /* --- I/O スキーマ -------------------------------------------------- */
 const workflowInputSchema = z.object({
@@ -20,6 +26,37 @@ const workflowOutputSchema = z.object({
     founded: z.string(),
     overview: z.string(),
   }),
+  socialInsurance: z.object({
+    insuredStatus: z.union([z.literal("加入中"), z.literal("未加入")]),
+    insuredCount: z.number(),
+  }),
+  pressReleases: z.array(
+    z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    }),
+  ),
+  news: z.array(
+    z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    }),
+  ),
+  // bulletin: z.array(
+  //   z.object({
+  //     comment: z.string(),
+  //     url: z.string(),
+  //   }),
+  // ),
+  fetchNews: z.array(
+    z.object({
+      title: z.string(),
+      publishDate: z.string(),
+      url: z.string(),
+    }),
+  ),
 });
 
 /* --- Step 定義 ----------------------------------------------------- */
@@ -34,21 +71,189 @@ const makeBasicInfoPrompt = createStep({
   }),
 });
 
+const makeNamePrompt = createStep({
+  id: "makeNamePrompt",
+  description:
+    "企業名を企業情報収集エージェント向けに渡す",
+  inputSchema: workflowInputSchema,
+  outputSchema: z.object({ prompt: z.string() }),
+  execute: async ({ inputData }) => ({
+    prompt: `${inputData.name}`,
+  }),
+});
+
 const companyDataStep = createStep(companyDataAgent);
+const socialInsuranceStep = createStep(socialInsuranceAgent);
+const prtimesStep = createStep(prtimesAgent);
+const nikkeiNewsStep = createStep(nikkeiAgent);
+// const bulletinStep = createStep(bulletinAgent);
+const fetchNewsStep = createStep(fetchNewsAgent);
+const classifyRiskStep = createStep({
+  id: "classifyRiskStep",
+  description: "プレスリリースURLごとにリスク判定を実施",
+  inputSchema: z.object({
+    pressReleases: z.array(
+      z.object({
+        title: z.string(),
+        date: z.string(),
+        url: z.string(),
+      })
+    ),
+  }),
+  outputSchema: z.array(
+    z.object({
+      url: z.string(),
+      label: z.string(),
+      reason: z.string(),
+    })
+  ),
+  execute: async ({ inputData }) => {
+    const results = [];
+    for (const pr of inputData.pressReleases) {
+      // URLをそのままuserメッセージとして渡す
+      const res = await classifyRiskAgent.generate([`URL: ${pr.url}`]);
+      // 返却値のtextからラベルと理由を抽出
+      const text = res.text || "";
+      const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
+      const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
+      results.push({
+        url: pr.url,
+        label: labelMatch ? labelMatch[1] : "",
+        reason: reasonMatch ? reasonMatch[1] : text,
+      });
+    }
+    return results;
+  },
+});
+
+const parsePressReleasesStep = createStep({
+  id: "parsePressReleasesStep",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: z.object({
+    pressReleases: z.array(z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    })),
+  }),
+  execute: async ({ inputData }) => ({
+    pressReleases: JSON.parse(inputData.text),
+  }),
+});
+
+const parseNewsStep = createStep({
+  id: "parseNewsStep",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: z.object({
+    news: z.array(z.object({
+      title: z.string(),
+      date: z.string(),
+      url: z.string(),
+    })),
+  }),
+  execute: async ({ inputData }) => ({
+    news: JSON.parse(inputData.text),
+  }),
+});
+
+const classifyNewsRiskStep = createStep({
+  id: "classifyNewsRiskStep",
+  description: "ニュースURLごとにリスク判定を実施",
+  inputSchema: z.object({
+    news: z.array(
+      z.object({
+        title: z.string(),
+        date: z.string(),
+        url: z.string(),
+      })
+    ),
+  }),
+  outputSchema: z.array(
+    z.object({
+      url: z.string(),
+      label: z.string(),
+      reason: z.string(),
+    })
+  ),
+  execute: async ({ inputData }) => {
+    const results: { url: string; label: string; reason: string; }[] | PromiseLike<{ url: string; label: string; reason: string; }[]> = [];
+    for (const n of inputData.news) {
+      const res = await classifyRiskAgent.generate([`URL: ${n.url}`]);
+      const text = res.text || "";
+      const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
+      const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
+      results.push({
+        url: n.url,
+        label: labelMatch ? labelMatch[1] : "",
+        reason: reasonMatch ? reasonMatch[1] : text,
+      });
+    }
+    return results;
+  },
+});
+
+const aggregateResultsStep = createStep({
+  id: "aggregateResults",
+  description: "前のステップの出力を集約してワークフローの出力スキーマに適合させる",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: workflowOutputSchema,
+  execute: async (params) => {
+    const ctx = (params as any).context;
+    return {
+      basic: ctx.steps[companyDataStep.id as string].output,
+      socialInsurance: ctx.steps[socialInsuranceStep.id as string].output,
+      pressReleases: ctx.steps[prtimesStep.id as string].output,
+      news: ctx.steps[nikkeiNewsStep.id as string].output,
+      fetchNews: ctx.steps[fetchNewsStep.id as string].output,
+    } as z.infer<typeof workflowOutputSchema>;
+  },
+});
 
 /* --- Workflow ------------------------------------------------------ */
 const _workflow = createWorkflow({
-  id: "company-info-collection-vnext",
+  id: "company-info-workflow",
   inputSchema: workflowInputSchema,
   outputSchema: workflowOutputSchema,
-  steps: [makeBasicInfoPrompt, companyDataStep],
+  steps: [
+    makeNamePrompt,
+    makeBasicInfoPrompt,
+    companyDataStep,
+    socialInsuranceStep,
+    prtimesStep,
+    parsePressReleasesStep,
+    classifyRiskStep,
+    fetchNewsStep,
+    parseNewsStep,
+    classifyNewsRiskStep,
+    nikkeiNewsStep,
+    // bulletinStep,
+    aggregateResultsStep,
+  ],
 })
 
 export const companyInfoWorkflow = _workflow
-  .then(makeBasicInfoPrompt)   // 処理の順序を明示
+  // --- PR TIMES系 流れ ---
+  .then(makeNamePrompt)
+  .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
+  .then(prtimesStep)
+  .map({ text: { step: prtimesStep, path: "text" } })
+  .then(parsePressReleasesStep)
+  .map({ pressReleases: { step: parsePressReleasesStep, path: "pressReleases" } })
+  // --- ニュース系 流れ ---
+  .map({ prompt: { step: makeNamePrompt, path: "prompt" } })
+  .then(fetchNewsStep)
+  .map({ text: { step: fetchNewsStep, path: "text" } })
+  .then(parseNewsStep)
+  .map({ news: { step: parseNewsStep, path: "news" } })
+  // --- 並列化 ---
+  .parallel([
+    classifyRiskStep,
+    classifyNewsRiskStep,
+  ])
   .map({
-    prompt: { step: makeBasicInfoPrompt, path: "prompt" }
+    pressReleaseRisks: { step: classifyRiskStep, path: "output" },
+    newsRisks:         { step: classifyNewsRiskStep, path: "output" },
   })
-  .then(companyDataStep)
-  .commit();                   // ← これを忘れると UI に出ない
+  .then(aggregateResultsStep)
+  .commit();
 
