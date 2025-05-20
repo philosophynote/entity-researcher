@@ -8,18 +8,15 @@ import { fetchNewsByCompany } from '../tools/fetchNewsTool';
 const prtimesToolStep = createStep(prtimesKeywordSearch);
 // NEWS APIツールをステップ化
 const fetchNewsToolStep = createStep(fetchNewsByCompany);
-<<<<<<< Updated upstream
-=======
 
 // --- 初期入力受け渡し＆ログ出力ステップ ---
 const initialStep = createStep({
   id: 'initial',
   description: 'ワークフロー初期入力をラップして返す',
-  inputSchema: z.object({ companyName: z.string().describe('企業名') }),
-  outputSchema: z.object({ companyName: z.string().describe('企業名') }),
+  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
+  outputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
   async execute({ inputData }) {
-    console.log('[prAndNews] initial input:', inputData);
-    return { companyName: inputData.companyName };
+    return { companyName: inputData.companyName, corporateNumber: inputData.corporateNumber };
   },
 });
 
@@ -62,7 +59,6 @@ const logNewsOutputStep = createStep({
     return inputData;
   },
 });
->>>>>>> Stashed changes
 
 // リスク判定結果の共通スキーマ
 const riskSchema = z.object({
@@ -94,34 +90,13 @@ export const newsFlow = createWorkflow({
   .then(fetchNewsToolStep)
   .map({ news: { step: fetchNewsToolStep, path: '.' } })
   .then(classifyNewsRiskStep)
-<<<<<<< Updated upstream
-=======
   .then(logNewsOutputStep)
->>>>>>> Stashed changes
   .commit();
 
 // メイン・ワークフロー
 export const prAndNewsParallelWorkflow = createWorkflow({
   id: 'pr-and-news-parallel-workflow',
-<<<<<<< Updated upstream
-  inputSchema: z.object({ name: z.string() }),
-  outputSchema: z.object({
-    prRisks: z.array(riskSchema),
-    newsRisks: z.array(riskSchema),
-  }),
-})
-  .then(makeNamePrompt)
-  .map({
-    keyword: { step: makeNamePrompt, path: 'prompt' },
-    companyName: { step: makeNamePrompt, path: 'prompt' },
-  })
-  // PR TIMES と NEWS API を同時に実行
-  .parallel([prFlow, newsFlow])
-  .map({
-    prRisks: { step: prFlow, path: '.' },
-    newsRisks: { step: newsFlow, path: '.' },
-=======
-  inputSchema: z.object({ companyName: z.string().describe('企業名') }),
+  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
   outputSchema: z.object({
     prRisks: z.array(riskSchema).describe('プレスリリースリスク'),
     newsRisks: z.array(riskSchema).describe('ニュースリスク'),
@@ -132,6 +107,7 @@ export const prAndNewsParallelWorkflow = createWorkflow({
     // initialStep の出力を利用して各フローに必要な入力をマッピング
     keyword:    { step: initialStep, path: 'companyName', schema: z.string().describe('検索キーワード') },
     companyName:{ step: initialStep, path: 'companyName', schema: z.string().describe('企業名') },
+    corporateNumber: { step: initialStep, path: 'corporateNumber', schema: z.string().length(13).describe('法人番号') },
   })
   .parallel([
     prFlow,
@@ -140,6 +116,5 @@ export const prAndNewsParallelWorkflow = createWorkflow({
   .map({
     prRisks:  { step: prFlow,  path: '.' },
     newsRisks:{ step: newsFlow, path: '.' },
->>>>>>> Stashed changes
   })
   .commit(); 
