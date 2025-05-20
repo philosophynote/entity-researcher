@@ -11,7 +11,9 @@ import { classifyRiskAgent } from './agents/classifyRiskAgent';
 import { bulletinAgent } from './agents/bulletinAgent';
 import { browserAgent } from './agents/browserAgent';
 import { companyInfoWorkflow } from './workflows/companyInfoWorkflow';
+import { classifyIndustryAgent } from './agents/classifyIndustryAgent';
 import { prFlow, newsFlow, prAndNewsParallelWorkflow } from './workflows/prAndNewsParallelWorkflow';
+import { companyDataWorkflow } from './workflows/companyDataWorkflow';
 import { nenkinCorporateSearch } from './workflows/nenkinCorporateSearch';
 import { fullCompanyWorkflow } from './workflows/fullCompanyWorkflow';
 
@@ -28,12 +30,14 @@ export const mastra = new Mastra({
     fetchNewsAgent: fetchNewsAgent,
     classifyRiskAgent: classifyRiskAgent,
     bulletinAgent: bulletinAgent,
+    classifyIndustryAgent: classifyIndustryAgent,
   },
   vnext_workflows: {
     companyInfoWorkflow,
     prAndNewsParallelWorkflow,
     prFlow,
     newsFlow,
+    companyDataWorkflow,
     nenkinCorporateSearch,
     fullCompanyWorkflow,
   },

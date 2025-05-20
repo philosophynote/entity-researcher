@@ -9,6 +9,7 @@ import { nikkeiAgent } from "../agents/nikkeiAgent";
 // import { bulletinAgent } from "../agents/bulletinAgent";
 import { fetchNewsAgent } from "../agents/fetchNewsAgent";
 import { classifyRiskAgent } from "../agents/classifyRiskAgent";
+import { getCompanyCandidates } from '../tools/getCompanyCandidates';
 
 /* --- I/O スキーマ -------------------------------------------------- */
 const workflowInputSchema = z.object({
@@ -70,6 +71,19 @@ const makeBasicInfoPrompt = createStep({
   execute: async ({ inputData }) => ({
     prompt: `法人番号: ${inputData.corporateNumber}\n企業名: ${inputData.name}\n所在地: ${inputData.address}`,
   }),
+});
+
+export const makeCorporateNumberPrompt = createStep({
+  id: "makeCorporateNumberPrompt",
+  description:
+    "法人番号を企業情報収集エージェント向けに渡す",
+  inputSchema: workflowInputSchema,
+  outputSchema: z.object({ prompt: z.string() }),
+  execute: async ({ inputData }) => {
+    return {
+      prompt: `${inputData.corporateNumber}`,
+    };
+  },
 });
 
 export const makeNamePrompt = createStep({

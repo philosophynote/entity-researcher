@@ -49,7 +49,22 @@ export const companyDataAgent = new Agent({
   - 設立年月日
   - 企業概要
 
-  検索結果から該当情報を抽出し、TypeScript型 CompanyData のJSONとして、余分な文章なしで返してください。
+  検索結果から該当情報を抽出し、TypeScript型 CompanyData に対応する純粋なJSONオブジェクトを返してください。
+
+  type CompanyData = {
+  {
+    "representative": "代表者名",
+    "corporateUrl": "コーポレートURL",
+    "landingPages": ["提供サービス/商品のLPのURL"],
+    "phone": "電話番号",
+    "employees": "従業員数",
+    "founded": "設立年月日",
+    "overview": "企業概要"
+  }
+
+
+  返却するJSON以外の余分な文章、コードブロック、マークダウン形式は一切含めないでください。
+  
   `,
   evals: {
     summarization: new SummarizationMetric(model),

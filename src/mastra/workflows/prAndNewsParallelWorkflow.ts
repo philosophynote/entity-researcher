@@ -1,13 +1,16 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows/vNext';
 import { z } from 'zod';
-import { makeNamePrompt, classifyRiskStep, classifyNewsRiskStep } from './companyInfoWorkflow';
+import { makeNamePrompt, classifyRiskStep, classifyNewsRiskStep, makeCorporateNumberPrompt } from './companyInfoWorkflow';
 import { prtimesKeywordSearch } from '../tools/prTimesKeywordSearch';
 import { fetchNewsByCompany } from '../tools/fetchNewsTool';
+import { searchSocialInsurance } from '../tools/socialInsuranceTool';
 
 // PR TIMESツールをステップ化
 const prtimesToolStep = createStep(prtimesKeywordSearch);
 // NEWS APIツールをステップ化
 const fetchNewsToolStep = createStep(fetchNewsByCompany);
+// 社会保険ツールをステップ化
+const socialInsuranceToolStep = createStep(searchSocialInsurance);
 
 // --- 初期入力受け渡し＆ログ出力ステップ ---
 const initialStep = createStep({
@@ -91,6 +94,17 @@ export const newsFlow = createWorkflow({
   .map({ news: { step: fetchNewsToolStep, path: '.' } })
   .then(classifyNewsRiskStep)
   .then(logNewsOutputStep)
+  .commit();
+
+// 社会保険取得サブワークフロー
+export const socialInsuranceFlow = createWorkflow({
+  id: 'social-insurance-flow',
+  inputSchema: z.object({ corporateNumber: z.string() }),
+  outputSchema: socialInsuranceToolStep.outputSchema,
+})
+  .then(makeCorporateNumberPrompt)
+  .map({ corporateNumber: { step: makeCorporateNumberPrompt, path: 'corporateNumber' } })
+  .then(socialInsuranceToolStep)
   .commit();
 
 // メイン・ワークフロー
