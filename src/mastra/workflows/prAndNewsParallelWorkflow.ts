@@ -1,13 +1,16 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows/vNext';
 import { z } from 'zod';
-import { makeNamePrompt, classifyRiskStep, classifyNewsRiskStep } from './companyInfoWorkflow';
+import { makeNamePrompt, classifyRiskStep, classifyNewsRiskStep, makeCorporateNumberPrompt } from './companyInfoWorkflow';
 import { prtimesKeywordSearch } from '../tools/prTimesKeywordSearch';
 import { fetchNewsByCompany } from '../tools/fetchNewsTool';
+import { searchSocialInsurance } from '../tools/socialInsuranceTool';
 
 // PR TIMESツールをステップ化
 const prtimesToolStep = createStep(prtimesKeywordSearch);
 // NEWS APIツールをステップ化
 const fetchNewsToolStep = createStep(fetchNewsByCompany);
+// 社会保険ツールをステップ化
+const socialInsuranceToolStep = createStep(searchSocialInsurance);
 
 // リスク判定結果の共通スキーマ
 const riskSchema = z.object({
@@ -38,24 +41,41 @@ export const newsFlow = createWorkflow({
   .then(classifyNewsRiskStep)
   .commit();
 
+// 社会保険取得サブワークフロー
+export const socialInsuranceFlow = createWorkflow({
+  id: 'social-insurance-flow',
+  inputSchema: z.object({ corporateNumber: z.string() }),
+  outputSchema: socialInsuranceToolStep.outputSchema,
+})
+  .then(makeCorporateNumberPrompt)
+  .map({ corporateNumber: { step: makeCorporateNumberPrompt, path: 'corporateNumber' } })
+  .then(socialInsuranceToolStep)
+  .commit();
+
 // メイン・ワークフロー
 export const prAndNewsParallelWorkflow = createWorkflow({
-  id: 'pr-and-news-parallel-workflow',
-  inputSchema: z.object({ name: z.string() }),
+  id: 'pr-news-and-social-insurance-parallel-workflow',
+  inputSchema: z.object({ companyName: z.string(), corporateNumber: z.string() }),
   outputSchema: z.object({
     prRisks: z.array(riskSchema),
     newsRisks: z.array(riskSchema),
+    socialInsurance: socialInsuranceToolStep.outputSchema,
   }),
 })
-  .then(makeNamePrompt)
   .map({
-    keyword: { step: makeNamePrompt, path: 'prompt' },
-    companyName: { step: makeNamePrompt, path: 'prompt' },
+    keyword: { value: (ctx) => ctx.companyName, schema: z.string() },
+    name: { value: (ctx) => ctx.companyName, schema: z.string() },
+    companyName: { value: (ctx) => ctx.companyName, schema: z.string() },
+    corporateNumber: { value: (ctx) => ctx.corporateNumber, schema: z.string() },
   })
-  // PR TIMES と NEWS API を同時に実行
-  .parallel([prFlow, newsFlow])
+  .parallel([
+    prFlow,
+    newsFlow,
+    socialInsuranceFlow
+  ])
   .map({
     prRisks: { step: prFlow, path: '.' },
     newsRisks: { step: newsFlow, path: '.' },
+    socialInsurance: { step: socialInsuranceFlow, path: '.' },
   })
   .commit(); 
