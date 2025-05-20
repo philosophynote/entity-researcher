@@ -15,46 +15,20 @@ type CompanyCandidate = {
  * 企業情報型（APIスキーマと合わせる）
  */
 type CompanyInfo = {
+  companyName: string;
   corporateNumber: string;
-  name: string;
-  address: string;
+  address?: string;
   corporateUrl: string;
-  lpUrl: string;
+  landingPages: string[];
   industry: string;
   phone: string;
-  employees: string;
-  established: string;
-  summary: string;
-  socialInsurance: {
-    joined: boolean;
-    insuredCount: number;
-    sourceUrl: string;
-  };
-  pressReleases: Array<{
-    title: string;
-    url: string;
-    date: string;
-    sourceUrl: string;
-  }>;
-  news: Array<{
-    title: string;
-    url: string;
-    date: string;
-    sourceUrl: string;
-  }>;
-  reviews: Array<{
-    site: string;
-    title: string;
-    url: string;
-    summary: string;
-    sourceUrl: string;
-  }>;
-  anonymousBoard: Array<{
-    title: string;
-    url: string;
-    summary: string;
-    sourceUrl: string;
-  }>;
+  employees: number;
+  founded: string;
+  overview: string;
+  insuredStatus: string;
+  insuredCount: number;
+  prRisks: { url: string; label: string; reason: string }[];
+  newsRisks: { url: string; label: string; reason: string }[];
 };
 
 export default function Home() {
@@ -80,7 +54,9 @@ export default function Home() {
         body: JSON.stringify({ query }),
       });
       if (!res.ok) throw new Error("検索に失敗しました");
+      console.log(res);
       const data = await res.json();
+      console.log(data);
       setCandidates(data);
     } catch (e) {
       setError("企業候補の取得に失敗しました");
@@ -99,7 +75,7 @@ export default function Home() {
       const res = await fetch("/api/company-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ corporateNumber: candidate.corporateNumber }),
+        body: JSON.stringify({ corporateNumber: candidate.corporateNumber, companyName: candidate.name }),
       });
       if (!res.ok) throw new Error("情報取得に失敗しました");
       const data = await res.json();
@@ -166,12 +142,7 @@ export default function Home() {
               </tr>
               <tr>
                 <td className="border px-2 py-1">企業名</td>
-                <td className="border px-2 py-1">{info.name}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">所在地</td>
-                <td className="border px-2 py-1">{info.address}</td>
+                <td className="border px-2 py-1">{info.companyName}</td>
                 <td className="border px-2 py-1">-</td>
               </tr>
               <tr>
@@ -184,9 +155,11 @@ export default function Home() {
               <tr>
                 <td className="border px-2 py-1">LP URL</td>
                 <td className="border px-2 py-1">
-                  <a href={info.lpUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.lpUrl}</a>
+                  {info.landingPages[0] ? (
+                    <a href={info.landingPages[0]} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.landingPages[0]}</a>
+                  ) : '-'}
                 </td>
-                <td className="border px-2 py-1">{info.lpUrl}</td>
+                <td className="border px-2 py-1">{info.landingPages[0] || '-'}</td>
               </tr>
               <tr>
                 <td className="border px-2 py-1">業種</td>
@@ -205,67 +178,37 @@ export default function Home() {
               </tr>
               <tr>
                 <td className="border px-2 py-1">設立年月日</td>
-                <td className="border px-2 py-1">{info.established}</td>
+                <td className="border px-2 py-1">{info.founded}</td>
                 <td className="border px-2 py-1">-</td>
               </tr>
               <tr>
                 <td className="border px-2 py-1">企業概要</td>
-                <td className="border px-2 py-1">{info.summary}</td>
+                <td className="border px-2 py-1">{info.overview}</td>
                 <td className="border px-2 py-1">-</td>
               </tr>
               <tr>
                 <td className="border px-2 py-1">社会保険加入状況</td>
-                <td className="border px-2 py-1">{info.socialInsurance.joined ? '加入' : '未加入'}（被保険者数: {info.socialInsurance.insuredCount}人）</td>
-                <td className="border px-2 py-1">
-                  <a href={info.socialInsurance.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.socialInsurance.sourceUrl}</a>
-                </td>
+                <td className="border px-2 py-1">{info.insuredStatus}（被保険者数: {info.insuredCount}人）</td>
+                <td className="border px-2 py-1">-</td>
               </tr>
               {/* プレスリリース */}
-              {info.pressReleases.map((pr, i) => (
+              {info.prRisks.map((pr, i) => (
                 <tr key={"pr-"+i}>
                   <td className="border px-2 py-1">プレスリリース</td>
                   <td className="border px-2 py-1">
-                    <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.title}（{pr.date}）</a>
+                    <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.label}</a><br />{pr.reason}
                   </td>
-                  <td className="border px-2 py-1">
-                    <a href={pr.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.sourceUrl}</a>
-                  </td>
+                  <td className="border px-2 py-1">{pr.url}</td>
                 </tr>
               ))}
               {/* ニュース */}
-              {info.news.map((n, i) => (
+              {info.newsRisks.map((n, i) => (
                 <tr key={"news-"+i}>
                   <td className="border px-2 py-1">ニュース</td>
                   <td className="border px-2 py-1">
-                    <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.title}（{n.date}）</a>
+                    <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.label}</a><br />{n.reason}
                   </td>
-                  <td className="border px-2 py-1">
-                    <a href={n.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.sourceUrl}</a>
-                  </td>
-                </tr>
-              ))}
-              {/* 口コミ */}
-              {info.reviews.map((r, i) => (
-                <tr key={"review-"+i}>
-                  <td className="border px-2 py-1">口コミ（{r.site}）</td>
-                  <td className="border px-2 py-1">
-                    <a href={r.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.title}</a><br />{r.summary}
-                  </td>
-                  <td className="border px-2 py-1">
-                    <a href={r.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.sourceUrl}</a>
-                  </td>
-                </tr>
-              ))}
-              {/* 匿名掲示板 */}
-              {info.anonymousBoard.map((a, i) => (
-                <tr key={"anon-"+i}>
-                  <td className="border px-2 py-1">匿名掲示板</td>
-                  <td className="border px-2 py-1">
-                    <a href={a.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{a.title}</a><br />{a.summary}
-                  </td>
-                  <td className="border px-2 py-1">
-                    <a href={a.sourceUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{a.sourceUrl}</a>
-                  </td>
+                  <td className="border px-2 py-1">{n.url}</td>
                 </tr>
               ))}
             </tbody>
