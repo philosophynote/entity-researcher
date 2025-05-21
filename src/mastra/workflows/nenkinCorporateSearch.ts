@@ -8,7 +8,7 @@ import { parse } from 'node-html-parser';
  */
 const searchStep = createStep({
   id: 'search',
-  inputSchema: z.object({ corporateNumber: z.string().length(13) }),
+  inputSchema: z.object({ companyName: z.string(), corporateNumber: z.string().length(13) }),
   outputSchema: z.object({ text: z.string() }),
   async execute({ inputData }) {
     // browserAgentのgenerateでプロンプトを渡してHTMLを取得
@@ -62,7 +62,7 @@ const parseStep = createStep({
 
 export const nenkinCorporateSearch = createWorkflow({
   id: 'nenkin-corporate-search',
-  inputSchema: z.object({ corporateNumber: z.string().length(13) }),
+  inputSchema: z.object({ companyName: z.string(), corporateNumber: z.string().length(13) }),
   outputSchema: z.object({
     insuredStatus: z.union([z.literal('加入中'), z.literal('未加入')]),
     insuredCount: z.number(),

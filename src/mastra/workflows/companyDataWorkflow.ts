@@ -6,8 +6,11 @@ import { classifyIndustryAgent } from '../agents/classifyIndustryAgent';
 // 企業基本情報取得ステップ
 const collectCompanyDataStep = createStep({
   id: 'collectCompanyData',
-  description: '企業名を入力として企業基本情報を取得する',
-  inputSchema: z.object({ companyName: z.string().describe('企業名') }),
+  description: '企業名と法人番号を入力として企業基本情報を取得する',
+  inputSchema: z.object({
+    companyName: z.string().describe('企業名'),
+    corporateNumber: z.string().regex(/^\d{13}$/, '法人番号は13桁の数字で入力してください').describe('法人番号'),
+  }),
   outputSchema: z.object({
     representative: z.string(),
     corporateUrl: z.string(),

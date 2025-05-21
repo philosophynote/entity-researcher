@@ -46,6 +46,7 @@
     - [PR TIMES](https://prtimes.jp/)から半年間のプレスリリース情報を取得
   - NEWS APIを利用して該当企業のニュースを取得
   - 上記で取得した情報のリスクレベルを判定
+- 返却されるデータの例は`src/mastra/workflows/output.json`を参照
 
 ---
 
