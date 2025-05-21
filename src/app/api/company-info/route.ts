@@ -22,7 +22,7 @@ const FullCompanyOutputSchema = z.object({
   corporateUrl: z.string(),
   landingPages: z.array(z.string()),
   phone: z.string(),
-  employees: z.string(),
+  employees: z.number(),
   founded: z.string(),
   overview: z.string(),
   industry: z.string(),
