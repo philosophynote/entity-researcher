@@ -1,7 +1,21 @@
 import { z } from 'zod';
 import { createWorkflow, createStep } from '@mastra/core/workflows/vNext';
-import { companyDataAgent, CompanyData } from '../agents/companyDataAgent';
+import { companyDataAgent, CompanyData, fetchCompanyData, parseCompanyData } from '../agents/companyDataAgent';
 import { classifyIndustryAgent } from '../agents/classifyIndustryAgent';
+
+// 共通スキーマ
+const fieldWithSourceString = z.object({
+  value: z.string(),
+  source: z.array(z.string())
+});
+const fieldWithSourceStringArray = z.object({
+  value: z.array(z.string()),
+  source: z.array(z.string())
+});
+const fieldWithSourceNumber = z.object({
+  value: z.number(),
+  source: z.array(z.string())
+});
 
 // 企業基本情報取得ステップ
 const collectCompanyDataStep = createStep({
@@ -10,23 +24,26 @@ const collectCompanyDataStep = createStep({
   inputSchema: z.object({
     companyName: z.string().describe('企業名'),
     corporateNumber: z.string().regex(/^\d{13}$/, '法人番号は13桁の数字で入力してください').describe('法人番号'),
+    address: z.string().describe('企業所在地'),
   }),
   outputSchema: z.object({
-    representative: z.string(),
-    corporateUrl: z.string(),
-    landingPages: z.array(z.string()),
-    phone: z.string(),
-    employees: z.number(),
-    founded: z.string(),
-    overview: z.string(),
+    representative: fieldWithSourceString,
+    corporateUrl: fieldWithSourceString,
+    landingPages: fieldWithSourceStringArray,
+    phone: fieldWithSourceString,
+    employees: fieldWithSourceNumber,
+    founded: fieldWithSourceString,
+    overview: fieldWithSourceString,
   }),
   execute: async ({ inputData }) => {
-    // エージェント呼び出し
+    // 企業データ取得関数を呼び出し
     const { companyName } = inputData;
-    const response = await companyDataAgent.generate([{ role: 'user', content: companyName }]);
-    // JSON文字列をパース
-    const data: CompanyData = JSON.parse(response.text);
-    return data;
+    const result = await fetchCompanyData(companyName);
+    
+    if (!result) {
+      throw new Error('企業データの取得に失敗しました');
+    }
+    return result;
   },
 });
 
@@ -41,7 +58,7 @@ const classifyIndustryStep = createStep({
   execute: async ({ inputData }) => {
     const { overview } = inputData;
     // GPTエージェント呼び出しで最適な業種を選択
-    const response = await classifyIndustryAgent.generate([{ role: 'user', content: overview }]);
+    const response = await classifyIndustryAgent.generate([{ role: 'user', content: overview.value }]);
     const industry = response.text.trim();
     return { industry };
   },

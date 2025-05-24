@@ -16,10 +16,10 @@ const socialInsuranceToolStep = createStep(searchSocialInsurance);
 const initialStep = createStep({
   id: 'initial',
   description: 'ワークフロー初期入力をラップして返す',
-  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
-  outputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
+  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号'), address: z.string().describe('住所') }),
+  outputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号'), address: z.string().describe('住所') }),
   async execute({ inputData }) {
-    return { companyName: inputData.companyName, corporateNumber: inputData.corporateNumber };
+    return { companyName: inputData.companyName, corporateNumber: inputData.corporateNumber, address: inputData.address };
   },
 });
 
@@ -110,7 +110,7 @@ export const socialInsuranceFlow = createWorkflow({
 // メイン・ワークフロー
 export const prAndNewsParallelWorkflow = createWorkflow({
   id: 'pr-and-news-parallel-workflow',
-  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
+  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号'), address: z.string().describe('住所') }),
   outputSchema: z.object({
     prRisks: z.array(riskSchema).describe('プレスリリースリスク'),
     newsRisks: z.array(riskSchema).describe('ニュースリスク'),
@@ -122,6 +122,7 @@ export const prAndNewsParallelWorkflow = createWorkflow({
     keyword:    { step: initialStep, path: 'companyName', schema: z.string().describe('検索キーワード') },
     companyName:{ step: initialStep, path: 'companyName', schema: z.string().describe('企業名') },
     corporateNumber: { step: initialStep, path: 'corporateNumber', schema: z.string().length(13).describe('法人番号') },
+    address: { step: initialStep, path: 'address', schema: z.string().describe('住所') },
   })
   .parallel([
     prFlow,

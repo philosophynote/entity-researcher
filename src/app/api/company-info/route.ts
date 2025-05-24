@@ -14,25 +14,40 @@ const CompanyInfoInputSchema = z.object({
 
 export type CompanyInfoInput = z.infer<typeof CompanyInfoInputSchema>;
 
-/**
- * fullCompanyWorkflowのoutputSchemaに準拠した出力スキーマ
- */
-const FullCompanyOutputSchema = z.object({
-  representative: z.string(),
-  corporateUrl: z.string(),
-  landingPages: z.array(z.string()),
-  phone: z.string(),
-  employees: z.number(),
-  founded: z.string(),
-  overview: z.string(),
-  industry: z.string(),
-  insuredStatus: z.union([z.literal('加入中'), z.literal('未加入')]),
-  insuredCount: z.number(),
-  prRisks: z.array(z.object({ url: z.string(), label: z.string(), reason: z.string() })),
-  newsRisks: z.array(z.object({ url: z.string(), label: z.string(), reason: z.string() })),
+const fieldWithSourceString = z.object({
+  value: z.string().nullable(),
+  source: z.array(z.string())
+});
+const fieldWithSourceStringArray = z.object({
+  value: z.array(z.string()).nullable(),
+  source: z.array(z.string())
+});
+const fieldWithSourceNumber = z.object({
+  value: z.number().nullable(),
+  source: z.array(z.string())
 });
 
-export type FullCompanyOutput = z.infer<typeof FullCompanyOutputSchema>;
+export const responseSchema = z.object({
+  representative: fieldWithSourceString,
+  corporateUrl: fieldWithSourceString,
+  landingPages: fieldWithSourceStringArray,
+  phone: fieldWithSourceString,
+  employees: fieldWithSourceNumber,
+  founded: fieldWithSourceString,
+  overview: fieldWithSourceString,
+  industry: z.string(),
+  prRisks: z.array(z.object({
+    url: z.string(),
+    label: z.string(),
+    reason: z.string(),
+  })),
+  newsRisks: z.array(z.object({
+    url: z.string(),
+    label: z.string(),
+    reason: z.string(),
+  })),
+});
+
 const client = new MastraClient({ baseUrl: MASTRA_URL });
 
 /**
@@ -57,7 +72,7 @@ export async function POST(req: NextRequest) {
     console.log(payload);
     /* 3. 出力バリデーション */
     if (payload.status === 'success' && payload.result) {
-      const result: FullCompanyOutput = FullCompanyOutputSchema.parse(payload.result);
+      const result: z.infer<typeof responseSchema> = responseSchema.parse(payload.result);
       /* 4. 正常応答 */
       return NextResponse.json(result);
     } else {
