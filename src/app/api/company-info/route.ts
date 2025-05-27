@@ -36,7 +36,7 @@ export const responseSchema = z.object({
   founded: fieldWithSourceString,
   overview: fieldWithSourceString,
   industry: z.string(),
-  insuredStatus: z.string(),
+  insuredStatus: z.union([z.literal('加入中'), z.literal('未加入')]),
   insuredCount: z.number(),
   prRisks: z.array(z.object({
     title: z.string(),

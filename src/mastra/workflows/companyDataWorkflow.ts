@@ -32,13 +32,13 @@ const collectCompanyDataStep = createStep({
     landingPages: fieldWithSourceStringArray,
     phone: fieldWithSourceString,
     employees: fieldWithSourceNumber,
-    founded: fieldWithSourceString,
+    founded: fieldWithSourceString, 
     overview: fieldWithSourceString,
   }),
   execute: async ({ inputData }) => {
     // 企業データ取得関数を呼び出し
-    const { companyName } = inputData;
-    const result = await fetchCompanyData(companyName);
+    const { companyName, address } = inputData;
+    const result = await fetchCompanyData(companyName, address);
     
     if (!result) {
       throw new Error('企業データの取得に失敗しました');
