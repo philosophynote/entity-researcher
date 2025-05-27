@@ -45,37 +45,10 @@ const filteredTools = Object.fromEntries(
  */
 export const parseCompanyData = (output: string): CompanyData | null => {
   try {
-    // TypeScriptのコード部分を抽出するための正規表現
-    const codeRegex = /```(?:typescript|json)?\s*([\s\S]+?)```/;
-    const match = output.match(codeRegex);
-    
-    if (match && match[1]) {
-      // 抽出したコード文字列を評価してオブジェクトを取得
-      const codeStr = match[1];
-      // evalを使用しないで安全に変換するために以下の方法を使用
-      const objectMatch = codeStr.match(/const\s+\w+\s*:\s*CompanyData\s*=\s*(\{[\s\S]+\});/);
-      
-      if (objectMatch && objectMatch[1]) {
-        // オブジェクトリテラル部分を抽出してJSONに変換
-        const objectStr = objectMatch[1]
-          .replace(/(\w+):/g, '"$1":') // プロパティ名をダブルクォートで囲む
-          .replace(/,(\s*[}\]])/g, '$1') // 最後のカンマを削除
-          .replace(/'/g, '"'); // シングルクォートをダブルクォートに変換
-        
-        // JSONとして解析
-        return JSON.parse(objectStr);
-      }
-    }
-    
-    // コードブロックが見つからない場合は、直接JSONとして解析を試みる
-    try {
-      return JSON.parse(output);
-    } catch (e) {
-      console.error('JSONパースエラー:', e);
-      return null;
-    }
+    // 受け取った文字列をそのままJSONとしてパース
+    return JSON.parse(output);
   } catch (error) {
-    console.error('フォーマットエラー:', error);
+    console.error('JSONパースエラー:', error);
     return null;
   }
 };
