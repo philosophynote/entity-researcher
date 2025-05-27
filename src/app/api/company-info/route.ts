@@ -36,12 +36,16 @@ export const responseSchema = z.object({
   founded: fieldWithSourceString,
   overview: fieldWithSourceString,
   industry: z.string(),
+  insuredStatus: z.string(),
+  insuredCount: z.number(),
   prRisks: z.array(z.object({
+    title: z.string(),
     url: z.string(),
     label: z.string(),
     reason: z.string(),
   })),
   newsRisks: z.array(z.object({
+    title: z.string(),
     url: z.string(),
     label: z.string(),
     reason: z.string(),
@@ -57,10 +61,7 @@ export async function POST(req: NextRequest) {
   try {
     /* 1. 入力バリデーション */
     const input = CompanyInfoInputSchema.parse(await req.json());
-    console.log(input);
     /* 2. vNext Workflow を起動 */
-    const hoge = await client.getVNextWorkflows();
-    console.log(hoge); 
     const fullCompanyWorkflowworkflow = client.getVNextWorkflow('fullCompanyWorkflow');
     const run = fullCompanyWorkflowworkflow.createRun();
 
@@ -68,8 +69,6 @@ export async function POST(req: NextRequest) {
     const payload  = await fullCompanyWorkflowworkflow.startAsync({
       inputData: input,
     });
-    console.log("payload");
-    console.log(payload);
     /* 3. 出力バリデーション */
     if (payload.status === 'success' && payload.result) {
       const result: z.infer<typeof responseSchema> = responseSchema.parse(payload.result);

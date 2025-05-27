@@ -23,48 +23,9 @@ const initialStep = createStep({
   },
 });
 
-// --- ログ出力用ステップ (prFlow) ---
-const logPrInputStep = createStep({
-  id: 'logPrInput',
-  inputSchema: prtimesToolStep.inputSchema,
-  outputSchema: prtimesToolStep.inputSchema,
-  async execute({ inputData }) {
-    console.log('[prFlow] prtimesKeywordSearch input:', inputData);
-    return inputData;
-  },
-});
-const logPrOutputStep = createStep({
-  id: 'logPrOutput',
-  inputSchema: classifyRiskStep.outputSchema,
-  outputSchema: classifyRiskStep.outputSchema,
-  async execute({ inputData }) {
-    console.log('[prFlow] classifyRiskStep output:', inputData);
-    return inputData;
-  },
-});
-
-// --- ログ出力用ステップ (newsFlow) ---
-const logNewsInputStep = createStep({
-  id: 'logNewsInput',
-  inputSchema: fetchNewsToolStep.inputSchema,
-  outputSchema: fetchNewsToolStep.inputSchema,
-  async execute({ inputData }) {
-    console.log('[newsFlow] fetchNewsByCompany input:', inputData);
-    return inputData;
-  },
-});
-const logNewsOutputStep = createStep({
-  id: 'logNewsOutput',
-  inputSchema: classifyNewsRiskStep.outputSchema,
-  outputSchema: classifyNewsRiskStep.outputSchema,
-  async execute({ inputData }) {
-    console.log('[newsFlow] classifyNewsRiskStep output:', inputData);
-    return inputData;
-  },
-});
-
 // リスク判定結果の共通スキーマ
 const riskSchema = z.object({
+  title: z.string(),
   url: z.string(),
   label: z.string(),
   reason: z.string(),
@@ -76,11 +37,9 @@ export const prFlow = createWorkflow({
   inputSchema: prtimesToolStep.inputSchema,
   outputSchema: classifyRiskStep.outputSchema,
 })
-  .then(logPrInputStep)
   .then(prtimesToolStep)
   .map({ pressReleases: { step: prtimesToolStep, path: '.' } })
   .then(classifyRiskStep)
-  .then(logPrOutputStep)
   .commit();
 
 // NEWS API 取得→分類サブワークフロー
@@ -89,11 +48,9 @@ export const newsFlow = createWorkflow({
   inputSchema: fetchNewsToolStep.inputSchema,
   outputSchema: classifyNewsRiskStep.outputSchema,
 })
-  .then(logNewsInputStep)
   .then(fetchNewsToolStep)
   .map({ news: { step: fetchNewsToolStep, path: '.' } })
   .then(classifyNewsRiskStep)
-  .then(logNewsOutputStep)
   .commit();
 
 // 社会保険取得サブワークフロー

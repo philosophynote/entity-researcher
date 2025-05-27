@@ -20,14 +20,17 @@ const socialInsuranceStep = createStep({
     const res = await socialInsuranceAgent.generate([
       { role: 'user', content: inputData.corporateNumber }
     ]);
-    let arr: { insuredStatus: '加入中'|'未加入', insuredCount: number }[] = [];
+    let arr: { socialInsuranceStatus: '加入中'|'未加入', insuredPersonsCount: number }[] = [];
     try {
       arr = JSON.parse(res.text ?? '[]');
-      console.log(arr);
     } catch {
       arr = [];
     }
-    return arr[0] ?? { insuredStatus: '未加入', insuredCount: 0 };
+    const first = arr[0] ?? { socialInsuranceStatus: '未加入', insuredPersonsCount: 0 };
+    return {
+      insuredStatus: first.socialInsuranceStatus,
+      insuredCount: first.insuredPersonsCount,
+    };
   },
 });
 
@@ -59,7 +62,11 @@ export const fullCompanyWorkflow = createWorkflow({
     newsRisks: z.array(z.object({ url: z.string(), label: z.string(), reason: z.string() })).describe('ニュースのリスク'),
   }),
 })
-  .parallel([companyDataWorkflow, socialInsuranceStep, prAndNewsParallelWorkflow])
+  .parallel([
+    companyDataWorkflow,
+    socialInsuranceStep,
+    prAndNewsParallelWorkflow,
+  ])
   .map({
     representative: { step: companyDataWorkflow, path: 'representative' },
     corporateUrl: { step: companyDataWorkflow, path: 'corporateUrl' },

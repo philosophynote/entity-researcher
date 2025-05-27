@@ -41,8 +41,8 @@ type CompanyInfo = {
   // 追加情報（社会保険やリスク等は従来通り）
   insuredStatus?: string;
   insuredCount?: number;
-  prRisks?: { url: string; label: string; reason: string }[];
-  newsRisks?: { url: string; label: string; reason: string }[];
+  prRisks?: { title: string; url: string; label: string; reason: string }[];
+  newsRisks?: { title: string; url: string; label: string; reason: string }[];
 };
 
 export default function Home() {
@@ -283,7 +283,7 @@ export default function Home() {
                   {info.prRisks.map((pr, i) => (
                     <tr key={"pr-"+i}>
                       <td className="border px-2 py-1">
-                        <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">title</a>
+                        <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.title}</a>
                       </td>
                       <td className="border px-2 py-1">{pr.label}</td>
                       <td className="border px-2 py-1">{pr.reason}</td>
@@ -309,7 +309,7 @@ export default function Home() {
                   {info.newsRisks.map((n, i) => (
                     <tr key={"news-"+i}>
                       <td className="border px-2 py-1">
-                        <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">title</a>
+                        <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.title}</a>
                       </td>
                       <td className="border px-2 py-1">{n.label}</td>
                       <td className="border px-2 py-1">{n.reason}</td>
