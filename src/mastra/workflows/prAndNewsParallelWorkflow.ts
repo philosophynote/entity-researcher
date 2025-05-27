@@ -1,9 +1,107 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows/vNext';
 import { z } from 'zod';
-import { makeNamePrompt, classifyRiskStep, classifyNewsRiskStep, makeCorporateNumberPrompt } from './companyInfoWorkflow';
 import { prtimesKeywordSearch } from '../tools/prTimesKeywordSearch';
 import { fetchNewsByCompany } from '../tools/fetchNewsTool';
 import { searchSocialInsurance } from '../tools/socialInsuranceTool';
+import { classifyRiskAgent } from '../agents/classifyRiskAgent';
+
+/* --- I/O スキーマ -------------------------------------------------- */
+const workflowInputSchema = z.object({
+  corporateNumber: z.string(),
+  name: z.string(),
+  address: z.string(),
+});
+
+export const classifyRiskStep = createStep({
+  id: "classifyRiskStep",
+  description: "プレスリリースURLごとにリスク判定を実施",
+  inputSchema: z.object({
+    pressReleases: z.array(
+      z.object({
+        title: z.string(),
+        date: z.string(),
+        url: z.string(),
+      })
+    ),
+  }),
+  outputSchema: z.array(
+    z.object({
+      title: z.string(),
+      url: z.string(),
+      label: z.string(),
+      reason: z.string(),
+    })
+  ),
+  execute: async ({ inputData }) => {
+    const results: { title: string; url: string; label: string; reason: string; }[] | PromiseLike<{ title: string; url: string; label: string; reason: string; }[]> = [];
+    for (const pr of inputData.pressReleases) {
+      // URLをそのままuserメッセージとして渡す
+      const res = await classifyRiskAgent.generate([`URL: ${pr.url}`]);
+      // 返却値のtextからラベルと理由を抽出
+      const text = res.text || "";
+      const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
+      const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
+      results.push({
+        title: pr.title,
+        url: pr.url,
+        label: labelMatch ? labelMatch[1] : "",
+        reason: reasonMatch ? reasonMatch[1] : text,
+      });
+    }
+    return results;
+  },
+});
+
+export const makeCorporateNumberPrompt = createStep({
+  id: "makeCorporateNumberPrompt",
+  description:
+    "法人番号を企業情報収集エージェント向けに渡す",
+  inputSchema: workflowInputSchema,
+  outputSchema: z.object({ prompt: z.string() }),
+  execute: async ({ inputData }) => {
+    return {
+      prompt: `${inputData.corporateNumber}`,
+    };
+  },
+});
+
+export const classifyNewsRiskStep = createStep({
+  id: "classifyNewsRiskStep",
+  description: "ニュースURLごとにリスク判定を実施",
+  inputSchema: z.object({
+    news: z.array(
+      z.object({
+        title: z.string(),
+        date: z.string(),
+        url: z.string(),
+      })
+    ),
+  }),
+  outputSchema: z.array(
+    z.object({
+      title: z.string(),
+      url: z.string(),
+      label: z.string(),
+      reason: z.string(),
+    })
+  ),
+  execute: async ({ inputData }) => {
+    const results: { title: string; url: string; label: string; reason: string; }[] | PromiseLike<{ title: string; url: string; label: string; reason: string; }[]> = [];
+    for (const n of inputData.news) {
+      const res = await classifyRiskAgent.generate([`URL: ${n.url}`]);
+      const text = res.text || "";
+      const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
+      const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
+      results.push({
+        title: n.title,
+        url: n.url,
+        label: labelMatch ? labelMatch[1] : "",
+        reason: reasonMatch ? reasonMatch[1] : text,
+      });
+    }
+    return results;
+  },
+});
 
 // PR TIMESツールをステップ化
 const prtimesToolStep = createStep(prtimesKeywordSearch);

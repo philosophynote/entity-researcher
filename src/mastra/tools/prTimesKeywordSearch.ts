@@ -4,8 +4,6 @@ import fetch from 'node-fetch';
 
 const PRTIMES_API_URL = "https://prtimes.jp/api"
 const SEARCH_PATH = "/keyword_search.php/search"
-const SEARCH_WORD = "資金調達"
-const PRESS_RELEASE_PREFIX = "/main/html/rd"
 
 function parseJapaneseDate(str: string): Date {
   const m = str.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2})?時?(\d{1,2})?分?/);
