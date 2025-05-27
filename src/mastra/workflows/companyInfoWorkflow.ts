@@ -118,13 +118,14 @@ export const classifyRiskStep = createStep({
   }),
   outputSchema: z.array(
     z.object({
+      title: z.string(),
       url: z.string(),
       label: z.string(),
       reason: z.string(),
     })
   ),
   execute: async ({ inputData }) => {
-    const results = [];
+    const results: { title: string; url: string; label: string; reason: string; }[] | PromiseLike<{ title: string; url: string; label: string; reason: string; }[]> = [];
     for (const pr of inputData.pressReleases) {
       // URLをそのままuserメッセージとして渡す
       const res = await classifyRiskAgent.generate([`URL: ${pr.url}`]);
@@ -133,6 +134,7 @@ export const classifyRiskStep = createStep({
       const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
       const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
       results.push({
+        title: pr.title,
         url: pr.url,
         label: labelMatch ? labelMatch[1] : "",
         reason: reasonMatch ? reasonMatch[1] : text,
@@ -170,8 +172,6 @@ export const parseNewsStep = createStep({
     })),
   }),
   execute: async ({ inputData }) => {
-    console.log('parseNewsStep inputData:', inputData);
-    console.log('parseNewsStep inputData.text:', inputData.text);
     return {
       news: JSON.parse(inputData.text),
     };
@@ -192,19 +192,21 @@ export const classifyNewsRiskStep = createStep({
   }),
   outputSchema: z.array(
     z.object({
+      title: z.string(),
       url: z.string(),
       label: z.string(),
       reason: z.string(),
     })
   ),
   execute: async ({ inputData }) => {
-    const results: { url: string; label: string; reason: string; }[] | PromiseLike<{ url: string; label: string; reason: string; }[]> = [];
+    const results: { title: string; url: string; label: string; reason: string; }[] | PromiseLike<{ title: string; url: string; label: string; reason: string; }[]> = [];
     for (const n of inputData.news) {
       const res = await classifyRiskAgent.generate([`URL: ${n.url}`]);
       const text = res.text || "";
       const labelMatch = text.match(/ラベル[:：]\s*(\S+)/);
       const reasonMatch = text.match(/理由[:：]\s*([^\n]+)/);
       results.push({
+        title: n.title,
         url: n.url,
         label: labelMatch ? labelMatch[1] : "",
         reason: reasonMatch ? reasonMatch[1] : text,

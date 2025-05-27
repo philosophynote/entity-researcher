@@ -16,55 +16,16 @@ const socialInsuranceToolStep = createStep(searchSocialInsurance);
 const initialStep = createStep({
   id: 'initial',
   description: 'ワークフロー初期入力をラップして返す',
-  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
-  outputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
+  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号'), address: z.string().describe('住所') }),
+  outputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号'), address: z.string().describe('住所') }),
   async execute({ inputData }) {
-    return { companyName: inputData.companyName, corporateNumber: inputData.corporateNumber };
-  },
-});
-
-// --- ログ出力用ステップ (prFlow) ---
-const logPrInputStep = createStep({
-  id: 'logPrInput',
-  inputSchema: prtimesToolStep.inputSchema,
-  outputSchema: prtimesToolStep.inputSchema,
-  async execute({ inputData }) {
-    console.log('[prFlow] prtimesKeywordSearch input:', inputData);
-    return inputData;
-  },
-});
-const logPrOutputStep = createStep({
-  id: 'logPrOutput',
-  inputSchema: classifyRiskStep.outputSchema,
-  outputSchema: classifyRiskStep.outputSchema,
-  async execute({ inputData }) {
-    console.log('[prFlow] classifyRiskStep output:', inputData);
-    return inputData;
-  },
-});
-
-// --- ログ出力用ステップ (newsFlow) ---
-const logNewsInputStep = createStep({
-  id: 'logNewsInput',
-  inputSchema: fetchNewsToolStep.inputSchema,
-  outputSchema: fetchNewsToolStep.inputSchema,
-  async execute({ inputData }) {
-    console.log('[newsFlow] fetchNewsByCompany input:', inputData);
-    return inputData;
-  },
-});
-const logNewsOutputStep = createStep({
-  id: 'logNewsOutput',
-  inputSchema: classifyNewsRiskStep.outputSchema,
-  outputSchema: classifyNewsRiskStep.outputSchema,
-  async execute({ inputData }) {
-    console.log('[newsFlow] classifyNewsRiskStep output:', inputData);
-    return inputData;
+    return { companyName: inputData.companyName, corporateNumber: inputData.corporateNumber, address: inputData.address };
   },
 });
 
 // リスク判定結果の共通スキーマ
 const riskSchema = z.object({
+  title: z.string(),
   url: z.string(),
   label: z.string(),
   reason: z.string(),
@@ -76,11 +37,9 @@ export const prFlow = createWorkflow({
   inputSchema: prtimesToolStep.inputSchema,
   outputSchema: classifyRiskStep.outputSchema,
 })
-  .then(logPrInputStep)
   .then(prtimesToolStep)
   .map({ pressReleases: { step: prtimesToolStep, path: '.' } })
   .then(classifyRiskStep)
-  .then(logPrOutputStep)
   .commit();
 
 // NEWS API 取得→分類サブワークフロー
@@ -89,11 +48,9 @@ export const newsFlow = createWorkflow({
   inputSchema: fetchNewsToolStep.inputSchema,
   outputSchema: classifyNewsRiskStep.outputSchema,
 })
-  .then(logNewsInputStep)
   .then(fetchNewsToolStep)
   .map({ news: { step: fetchNewsToolStep, path: '.' } })
   .then(classifyNewsRiskStep)
-  .then(logNewsOutputStep)
   .commit();
 
 // 社会保険取得サブワークフロー
@@ -110,7 +67,7 @@ export const socialInsuranceFlow = createWorkflow({
 // メイン・ワークフロー
 export const prAndNewsParallelWorkflow = createWorkflow({
   id: 'pr-and-news-parallel-workflow',
-  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号') }),
+  inputSchema: z.object({ companyName: z.string().describe('企業名'), corporateNumber: z.string().length(13).describe('法人番号'), address: z.string().describe('住所') }),
   outputSchema: z.object({
     prRisks: z.array(riskSchema).describe('プレスリリースリスク'),
     newsRisks: z.array(riskSchema).describe('ニュースリスク'),
@@ -122,6 +79,7 @@ export const prAndNewsParallelWorkflow = createWorkflow({
     keyword:    { step: initialStep, path: 'companyName', schema: z.string().describe('検索キーワード') },
     companyName:{ step: initialStep, path: 'companyName', schema: z.string().describe('企業名') },
     corporateNumber: { step: initialStep, path: 'corporateNumber', schema: z.string().length(13).describe('法人番号') },
+    address: { step: initialStep, path: 'address', schema: z.string().describe('住所') },
   })
   .parallel([
     prFlow,

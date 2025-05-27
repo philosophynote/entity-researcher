@@ -14,7 +14,6 @@ import { companyInfoWorkflow } from './workflows/companyInfoWorkflow';
 import { classifyIndustryAgent } from './agents/classifyIndustryAgent';
 import { prFlow, newsFlow, prAndNewsParallelWorkflow } from './workflows/prAndNewsParallelWorkflow';
 import { companyDataWorkflow } from './workflows/companyDataWorkflow';
-import { nenkinCorporateSearch } from './workflows/nenkinCorporateSearch';
 import { fullCompanyWorkflow } from './workflows/fullCompanyWorkflow';
 
 
@@ -38,7 +37,6 @@ export const mastra = new Mastra({
     prFlow,
     newsFlow,
     companyDataWorkflow,
-    nenkinCorporateSearch,
     fullCompanyWorkflow,
   },
   logger: createLogger({

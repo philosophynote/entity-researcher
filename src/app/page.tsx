@@ -1,6 +1,8 @@
 'use client';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { MapPin } from "lucide-react";
 
 /**
  * 企業候補型
@@ -14,21 +16,33 @@ type CompanyCandidate = {
 /**
  * 企業情報型（APIスキーマと合わせる）
  */
+type FieldWithSourceString = {
+  value: string;
+  source: string[];
+};
+type FieldWithSourceStringArray = {
+  value: string[];
+  source: string[];
+};
+type FieldWithSourceNumber = {
+  value: number;
+  source: string[];
+};
+
 type CompanyInfo = {
-  companyName: string;
-  corporateNumber: string;
-  address?: string;
-  corporateUrl: string;
-  landingPages: string[];
+  representative: FieldWithSourceString;
+  corporateUrl: FieldWithSourceString;
+  landingPages: FieldWithSourceStringArray;
+  phone: FieldWithSourceString;
+  employees: FieldWithSourceNumber;
+  founded: FieldWithSourceString;
+  overview: FieldWithSourceString;
   industry: string;
-  phone: string;
-  employees: number;
-  founded: string;
-  overview: string;
-  insuredStatus: string;
-  insuredCount: number;
-  prRisks: { url: string; label: string; reason: string }[];
-  newsRisks: { url: string; label: string; reason: string }[];
+  // 追加情報（社会保険やリスク等は従来通り）
+  insuredStatus?: string;
+  insuredCount?: number;
+  prRisks?: { title: string; url: string; label: string; reason: string }[];
+  newsRisks?: { title: string; url: string; label: string; reason: string }[];
 };
 
 export default function Home() {
@@ -108,111 +122,203 @@ export default function Home() {
       {candidates.length > 0 && (
         <div className="mb-6">
           <div className="mb-2 text-sm">候補から選択してください：</div>
-          <ul className="space-y-2">
+          <div className="flex flex-col gap-4">
             {candidates.map(c => (
-              <li key={c.corporateNumber}>
-                <Button
-                  variant={selected?.corporateNumber === c.corporateNumber ? "default" : "outline"}
-                  onClick={() => fetchInfo(c)}
-                  disabled={loading}
-                >
-                  {c.name}（{c.address}）
-                </Button>
-              </li>
+              <Card
+                key={c.corporateNumber}
+                className={`flex flex-row items-center gap-6 px-6 py-4 transition-colors duration-150 ${selected?.corporateNumber === c.corporateNumber ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+              >
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-xs text-gray-500">法人番号：{c.corporateNumber}</div>
+                    <div className="flex items-center text-sm text-gray-700">
+                      <MapPin className="w-4 h-4 mr-1 text-blue-400" />
+                      <span className="truncate">{c.address}</span>
+                    </div>
+                  </div>
+                  <div className="font-semibold text-lg truncate">{c.name}</div>
+                </div>
+                <div className="flex-shrink-0">
+                  <Button
+                    variant={selected?.corporateNumber === c.corporateNumber ? "default" : "outline"}
+                    onClick={() => fetchInfo(c)}
+                    disabled={loading}
+                  >
+                    {selected?.corporateNumber === c.corporateNumber ? '選択中' : '選択'}
+                  </Button>
+                </div>
+              </Card>
             ))}
-          </ul>
+          </div>
         </div>
       )}
-      {/* 企業情報テーブル */}
+      {/* 企業情報・リスクテーブル分割表示 */}
       {info && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border text-sm">
-            <thead>
-              <tr>
-                <th className="border px-2 py-1">項目名</th>
-                <th className="border px-2 py-1">内容</th>
-                <th className="border px-2 py-1">情報源URL</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border px-2 py-1">法人番号</td>
-                <td className="border px-2 py-1">{info.corporateNumber}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">企業名</td>
-                <td className="border px-2 py-1">{info.companyName}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">コーポレートURL</td>
-                <td className="border px-2 py-1">
-                  <a href={info.corporateUrl} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.corporateUrl}</a>
-                </td>
-                <td className="border px-2 py-1">{info.corporateUrl}</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">LP URL</td>
-                <td className="border px-2 py-1">
-                  {info.landingPages[0] ? (
-                    <a href={info.landingPages[0]} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.landingPages[0]}</a>
-                  ) : '-'}
-                </td>
-                <td className="border px-2 py-1">{info.landingPages[0] || '-'}</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">業種</td>
-                <td className="border px-2 py-1">{info.industry}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">電話番号</td>
-                <td className="border px-2 py-1">{info.phone}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">従業員数</td>
-                <td className="border px-2 py-1">{info.employees}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">設立年月日</td>
-                <td className="border px-2 py-1">{info.founded}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">企業概要</td>
-                <td className="border px-2 py-1">{info.overview}</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              <tr>
-                <td className="border px-2 py-1">社会保険加入状況</td>
-                <td className="border px-2 py-1">{info.insuredStatus}（被保険者数: {info.insuredCount}人）</td>
-                <td className="border px-2 py-1">-</td>
-              </tr>
-              {/* プレスリリース */}
-              {info.prRisks.map((pr, i) => (
-                <tr key={"pr-"+i}>
-                  <td className="border px-2 py-1">プレスリリース</td>
-                  <td className="border px-2 py-1">
-                    <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.label}</a><br />{pr.reason}
-                  </td>
-                  <td className="border px-2 py-1">{pr.url}</td>
+        <div className="space-y-8">
+          {/* 企業情報テーブル */}
+          <div className="overflow-x-auto">
+            <div className="font-bold text-lg mb-2">企業情報</div>
+            <table className="min-w-full border text-sm">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">項目名</th>
+                  <th className="border px-2 py-1">内容</th>
+                  <th className="border px-2 py-1">情報源URL</th>
                 </tr>
-              ))}
-              {/* ニュース */}
-              {info.newsRisks.map((n, i) => (
-                <tr key={"news-"+i}>
-                  <td className="border px-2 py-1">ニュース</td>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border px-2 py-1">代表者名</td>
+                  <td className="border px-2 py-1">{info.representative.value}</td>
                   <td className="border px-2 py-1">
-                    <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.label}</a><br />{n.reason}
+                    <ul>
+                      {info.representative.source.map((url, i) => (
+                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                      ))}
+                    </ul>
                   </td>
-                  <td className="border px-2 py-1">{n.url}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                <tr>
+                  <td className="border px-2 py-1">コーポレートURL</td>
+                  <td className="border px-2 py-1">
+                    <a href={info.corporateUrl.value} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.corporateUrl.value}</a>
+                  </td>
+                  <td className="border px-2 py-1">
+                    <ul>
+                      {info.corporateUrl.source.map((url, i) => (
+                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border px-2 py-1">LP URL</td>
+                  <td className="border px-2 py-1">
+                    {info.landingPages.value.length > 0 ? (
+                      <ul>
+                        {info.landingPages.value.map((lp, i) => (
+                          <li key={i}><a href={lp} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{lp}</a></li>
+                        ))}
+                      </ul>
+                    ) : '-'}
+                  </td>
+                  <td className="border px-2 py-1">
+                    <ul>
+                      {info.landingPages.source.map((url, i) => (
+                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border px-2 py-1">業種</td>
+                  <td className="border px-2 py-1">{info.industry}</td>
+                  <td className="border px-2 py-1">-</td>
+                </tr>
+                <tr>
+                  <td className="border px-2 py-1">電話番号</td>
+                  <td className="border px-2 py-1">{info.phone.value}</td>
+                  <td className="border px-2 py-1">
+                    <ul>
+                      {info.phone.source.map((url, i) => (
+                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border px-2 py-1">従業員数</td>
+                  <td className="border px-2 py-1">{info.employees.value}</td>
+                  <td className="border px-2 py-1">
+                    <ul>
+                      {info.employees.source.map((url, i) => (
+                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border px-2 py-1">設立年月日</td>
+                  <td className="border px-2 py-1">{info.founded.value}</td>
+                  <td className="border px-2 py-1">
+                    <ul>
+                      {info.founded.source.map((url, i) => (
+                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border px-2 py-1">企業概要</td>
+                  <td className="border px-2 py-1">{info.overview.value}</td>
+                  <td className="border px-2 py-1">
+                    <ul>
+                      {info.overview.source.map((url, i) => (
+                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border px-2 py-1">社会保険加入状況</td>
+                  <td className="border px-2 py-1">{info.insuredStatus}（被保険者数: {info.insuredCount}人）</td>
+                  <td className="border px-2 py-1">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {/* プレスリリーステーブル */}
+          {info.prRisks && info.prRisks.length > 0 && (
+            <div className="overflow-x-auto">
+              <div className="font-bold text-lg mb-2">プレスリリースリスク</div>
+              <table className="min-w-full border text-sm">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1">タイトル</th>
+                    <th className="border px-2 py-1">リスクレベル</th>
+                    <th className="border px-2 py-1">判定理由</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {info.prRisks.map((pr, i) => (
+                    <tr key={"pr-"+i}>
+                      <td className="border px-2 py-1">
+                        <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.title}</a>
+                      </td>
+                      <td className="border px-2 py-1">{pr.label}</td>
+                      <td className="border px-2 py-1">{pr.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {/* ニューステーブル */}
+          {info.newsRisks && info.newsRisks.length > 0 && (
+            <div className="overflow-x-auto">
+              <div className="font-bold text-lg mb-2">ニュースリスク</div>
+              <table className="min-w-full border text-sm">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1">タイトル</th>
+                    <th className="border px-2 py-1">リスクレベル</th>
+                    <th className="border px-2 py-1">判定理由</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {info.newsRisks.map((n, i) => (
+                    <tr key={"news-"+i}>
+                      <td className="border px-2 py-1">
+                        <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.title}</a>
+                      </td>
+                      <td className="border px-2 py-1">{n.label}</td>
+                      <td className="border px-2 py-1">{n.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

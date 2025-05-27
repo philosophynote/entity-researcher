@@ -20,7 +20,7 @@ export const socialInsuranceAgent = new Agent({
   model: openai('gpt-4.1-mini'),
   tools: await mcp.getTools(),
   instructions:  
-  `以下の手順で社会保険加入状況および被保険者人数を取得してください:\n
+  `あなたには法人番号が与えられるので、以下の手順で社会保険加入状況および被保険者人数を取得してください:\n
   1. https://www2.nenkin.go.jp/do/search_section/にアクセス\n
   2. 検索条件を法人番号検索に設定\n
   3. 検索フォームに法人番号を入力して検索\n

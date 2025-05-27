@@ -17,15 +17,19 @@ const model = openai("gpt-4.1-mini");
 /**
  * 企業基本情報の出力型
  */
+type FieldWithSource<T> = {
+  value: T;
+  source: string[];
+};
+
 export type CompanyData = {
-  representative: string;
-  corporateUrl: string;
-  landingPages: string[];
-  // industry: string;
-  phone: string;
-  employees: number;
-  founded: string;
-  overview: string;
+  representative: FieldWithSource<string>;
+  corporateUrl: FieldWithSource<string>;
+  landingPages: FieldWithSource<string[]>;
+  phone: FieldWithSource<string>;
+  employees: FieldWithSource<number>;
+  founded: FieldWithSource<string>;
+  overview: FieldWithSource<string>;
 };
 
 const allTools = await mcp.getTools();
@@ -34,42 +38,100 @@ const filteredTools = Object.fromEntries(
   Object.entries(allTools).filter(([toolName]) => toolName === "perplexity-ask_perplexity_ask"),
 );
 
+/**
+ * LLMの出力からCompanyDataオブジェクトを抽出する関数
+ * @param output LLMからの出力文字列
+ * @returns CompanyData型のオブジェクト
+ */
+export const parseCompanyData = (output: string): CompanyData | null => {
+  try {
+    // 受け取った文字列をそのままJSONとしてパース
+    return JSON.parse(output);
+  } catch (error) {
+    console.error('JSONパースエラー:', error);
+    return null;
+  }
+};
+
+/**
+ * 企業データを収集するエージェント
+ */
 export const companyDataAgent = new Agent({
   name: 'CompanyDataAgent',
   model,
   tools: filteredTools,
-  instructions: `
-  あなたは企業情報収集エージェントです。
-  WEBサイトで次の情報を検索してください。
-  - 代表者名
-  - コーポレートURL
-  - 提供サービス/商品のLPのURL
-  - 電話番号
-  - 従業員数
-  - 設立年月日
-  - 企業概要
+  instructions: 
+   `あなたはプロのリサーチャーです。企業名と企業所在地が与えられるので
+    企業情報を正確かつ最新の情報源に基づいて収集してください。
+    以下の各項目について、内容と情報源のURL（複数可）を必ず収集してください。
 
-  検索結果から該当情報を抽出し、TypeScript型 CompanyData に対応する純粋なJSONオブジェクトを返してください。
+    - 代表者名
+    - コーポレートURL
+    - 提供サービス/商品のLPのURL（複数ある場合はすべて）
+    - 電話番号
+    - 従業員数（数字のみ）
+    - 設立年月日（"YYYY-MM-DD" 形式）
+    - 企業概要（事業内容の要約）
 
-  type CompanyData = {
-  {
-    "representative": "代表者名",
-    "corporateUrl": "コーポレートURL",
-    "landingPages": ["提供サービス/商品のLPのURL"],
-    "phone": "電話番号",
-    "employees": "従業員数",
-    "founded": "設立年月日",
-    "overview": "企業概要"
-  }
+    ## 出力形式:
 
+    以下の形式の純粋なJSONオブジェクトのみを返してください。
+    コード例やマークダウン記法は使用せず、以下のJSONスキーマに完全に準拠した
+    オブジェクトのみを返してください。
 
-  返却するJSON以外の余分な文章、コードブロック、マークダウン形式は一切含めないでください。
-  
-  `,
+    {
+      "representative": {
+        "value": "代表者名",
+        "source": ["情報源URL1", "情報源URL2"]
+      },
+      "corporateUrl": {
+        "value": "企業のURL",
+        "source": ["情報源URL1", "情報源URL2"]
+      },
+      "landingPages": {
+        "value": ["LP URL1", "LP URL2"],
+        "source": ["情報源URL1", "情報源URL2"]
+      },
+      "phone": {
+        "value": "電話番号",
+        "source": ["情報源URL"]
+      },
+      "employees": {
+        "value": 従業員数,
+        "source": ["情報源URL"]
+      },
+      "founded": {
+        "value": "YYYY-MM-DD",
+        "source": ["情報源URL1", "情報源URL2"]
+      },
+      "overview": {
+        "value": "企業概要",
+        "source": ["情報源URL1", "情報源URL2"]
+      }
+    }
+    `,
   evals: {
     summarization: new SummarizationMetric(model),
     contentSimilarity: new ContentSimilarityMetric(),
     tone: new ToneConsistencyMetric(),
   },
-}); 
+});
+
+/**
+ * 企業名から企業データを取得する関数
+ * Agentを直接呼び出し、CompanyData型のオブジェクトを返す
+ * @param companyName 企業名
+ * @param location 所在地（オプション）
+ * @returns 企業データ
+ */
+export async function fetchCompanyData(companyName: string, location?: string): Promise<CompanyData | null> {
+  const prompt = `企業名: ${companyName}${location ? `\n所在地: ${location}` : ''}`;
+  const result = await companyDataAgent.generate(prompt);
+  
+  if (result && result.text) {
+    return parseCompanyData(result.text);
+  }
+  
+  return null;
+}
 
