@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,9 +68,7 @@ export default function Home() {
         body: JSON.stringify({ query }),
       });
       if (!res.ok) throw new Error("検索に失敗しました");
-      console.log(res);
       const data = await res.json();
-      console.log(data);
       setCandidates(data);
     } catch (e) {
       setError("企業候補の取得に失敗しました");
@@ -89,7 +87,10 @@ export default function Home() {
       const res = await fetch("/api/company-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ corporateNumber: candidate.corporateNumber, companyName: candidate.name }),
+        body: JSON.stringify({
+          corporateNumber: candidate.corporateNumber,
+          companyName: candidate.name,
+        }),
       });
       if (!res.ok) throw new Error("情報取得に失敗しました");
       const data = await res.json();
@@ -110,8 +111,8 @@ export default function Home() {
           type="text"
           placeholder="企業名を入力"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && searchCandidates()}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && searchCandidates()}
         />
         <Button onClick={searchCandidates} disabled={loading || !query}>
           検索
@@ -123,14 +124,16 @@ export default function Home() {
         <div className="mb-6">
           <div className="mb-2 text-sm">候補から選択してください：</div>
           <div className="flex flex-col gap-4">
-            {candidates.map(c => (
+            {candidates.map((c) => (
               <Card
                 key={c.corporateNumber}
-                className={`flex flex-row items-center gap-6 px-6 py-4 transition-colors duration-150 ${selected?.corporateNumber === c.corporateNumber ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+                className={`flex flex-row items-center gap-6 px-6 py-4 transition-colors duration-150 ${selected?.corporateNumber === c.corporateNumber ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white"}`}
               >
                 <div className="flex-1 min-w-0 flex flex-col gap-2">
                   <div className="flex items-center space-x-4">
-                    <div className="text-xs text-gray-500">法人番号：{c.corporateNumber}</div>
+                    <div className="text-xs text-gray-500">
+                      法人番号：{c.corporateNumber}
+                    </div>
                     <div className="flex items-center text-sm text-gray-700">
                       <MapPin className="w-4 h-4 mr-1 text-blue-400" />
                       <span className="truncate">{c.address}</span>
@@ -140,11 +143,17 @@ export default function Home() {
                 </div>
                 <div className="flex-shrink-0">
                   <Button
-                    variant={selected?.corporateNumber === c.corporateNumber ? "default" : "outline"}
+                    variant={
+                      selected?.corporateNumber === c.corporateNumber
+                        ? "default"
+                        : "outline"
+                    }
                     onClick={() => fetchInfo(c)}
                     disabled={loading}
                   >
-                    {selected?.corporateNumber === c.corporateNumber ? '選択中' : '選択'}
+                    {selected?.corporateNumber === c.corporateNumber
+                      ? "選択中"
+                      : "選択"}
                   </Button>
                 </div>
               </Card>
@@ -169,11 +178,21 @@ export default function Home() {
               <tbody>
                 <tr>
                   <td className="border px-2 py-1">代表者名</td>
-                  <td className="border px-2 py-1">{info.representative.value}</td>
+                  <td className="border px-2 py-1">
+                    {info.representative.value}
+                  </td>
                   <td className="border px-2 py-1">
                     <ul>
                       {info.representative.source.map((url, i) => (
-                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                        <li key={i}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {url}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </td>
@@ -181,12 +200,27 @@ export default function Home() {
                 <tr>
                   <td className="border px-2 py-1">コーポレートURL</td>
                   <td className="border px-2 py-1">
-                    <a href={info.corporateUrl.value} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{info.corporateUrl.value}</a>
+                    <a
+                      href={info.corporateUrl.value}
+                      className="text-blue-600 underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {info.corporateUrl.value}
+                    </a>
                   </td>
                   <td className="border px-2 py-1">
                     <ul>
                       {info.corporateUrl.source.map((url, i) => (
-                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                        <li key={i}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {url}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </td>
@@ -197,15 +231,34 @@ export default function Home() {
                     {info.landingPages.value.length > 0 ? (
                       <ul>
                         {info.landingPages.value.map((lp, i) => (
-                          <li key={i}><a href={lp} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{lp}</a></li>
+                          <li key={i}>
+                            <a
+                              href={lp}
+                              className="text-blue-600 underline"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {lp}
+                            </a>
+                          </li>
                         ))}
                       </ul>
-                    ) : '-'}
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="border px-2 py-1">
                     <ul>
                       {info.landingPages.source.map((url, i) => (
-                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                        <li key={i}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {url}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </td>
@@ -221,7 +274,15 @@ export default function Home() {
                   <td className="border px-2 py-1">
                     <ul>
                       {info.phone.source.map((url, i) => (
-                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                        <li key={i}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {url}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </td>
@@ -232,7 +293,15 @@ export default function Home() {
                   <td className="border px-2 py-1">
                     <ul>
                       {info.employees.source.map((url, i) => (
-                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                        <li key={i}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {url}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </td>
@@ -243,7 +312,15 @@ export default function Home() {
                   <td className="border px-2 py-1">
                     <ul>
                       {info.founded.source.map((url, i) => (
-                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                        <li key={i}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {url}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </td>
@@ -254,14 +331,24 @@ export default function Home() {
                   <td className="border px-2 py-1">
                     <ul>
                       {info.overview.source.map((url, i) => (
-                        <li key={i}><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></li>
+                        <li key={i}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {url}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </td>
                 </tr>
                 <tr>
                   <td className="border px-2 py-1">社会保険加入状況</td>
-                  <td className="border px-2 py-1">{info.insuredStatus}（被保険者数: {info.insuredCount}人）</td>
+                  <td className="border px-2 py-1">
+                    {info.insuredStatus}（被保険者数: {info.insuredCount}人）
+                  </td>
                   <td className="border px-2 py-1">-</td>
                 </tr>
               </tbody>
@@ -281,9 +368,16 @@ export default function Home() {
                 </thead>
                 <tbody>
                   {info.prRisks.map((pr, i) => (
-                    <tr key={"pr-"+i}>
+                    <tr key={"pr-" + i}>
                       <td className="border px-2 py-1">
-                        <a href={pr.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pr.title}</a>
+                        <a
+                          href={pr.url}
+                          className="text-blue-600 underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {pr.title}
+                        </a>
                       </td>
                       <td className="border px-2 py-1">{pr.label}</td>
                       <td className="border px-2 py-1">{pr.reason}</td>
@@ -307,9 +401,16 @@ export default function Home() {
                 </thead>
                 <tbody>
                   {info.newsRisks.map((n, i) => (
-                    <tr key={"news-"+i}>
+                    <tr key={"news-" + i}>
                       <td className="border px-2 py-1">
-                        <a href={n.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{n.title}</a>
+                        <a
+                          href={n.url}
+                          className="text-blue-600 underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {n.title}
+                        </a>
                       </td>
                       <td className="border px-2 py-1">{n.label}</td>
                       <td className="border px-2 py-1">{n.reason}</td>
