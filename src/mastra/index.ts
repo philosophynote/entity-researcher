@@ -21,7 +21,7 @@ export const mastra = new Mastra({
     bulletinAgent: bulletinAgent,
     classifyIndustryAgent: classifyIndustryAgent,
   },
-  vnext_workflows: {
+  workflows: {
     prAndNewsParallelWorkflow,
     companyDataWorkflow,
     fullCompanyWorkflow,
