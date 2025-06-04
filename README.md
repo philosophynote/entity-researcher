@@ -18,11 +18,14 @@
 ## 開発環境のセットアップ
 
 ```bash
+git clone <repository-url>
+cd entity-researcher
 npm install
-npm run dev
 ```
 
-ブラウザで `http://localhost:3000` を開くとアプリが表示されます。
+1. ルートに `.env`（または `.env.local`）を作成し、下記の環境変数を設定します。
+2. `npm run dev:mastra` で Mastra のサーバーを起動します。 
+3. 別のターミナルで `npm run dev` を実行し、ブラウザで `http://localhost:3000` を開きます。
 
 ### 必要な環境変数
 
